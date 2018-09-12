@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document>
+    <properties>
+        <title>Module rest dansmarue</title>
+    </properties>
+    <body>
+        <section name="Module rest dansmarue">
+         
+            <subsection name="Description">
+                <p>ce module expose des Webservices rest pour l'application mobile DansMaRue.</p>
+            </subsection>
+           
+        </section>
+    </body>
+</document>
