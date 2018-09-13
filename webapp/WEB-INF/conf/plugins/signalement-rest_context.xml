@@ -10,21 +10,11 @@
     </bean>
     <bean id="signalement-rest.sha1HashService"  class="fr.paris.lutece.util.signrequest.security.Sha1HashService" />
     <bean id="signalement-rest.ramenClientService" class="fr.paris.lutece.plugins.dansmarue.modules.rest.service.RamenClientService" />
-	<bean id="signalement-rest.manageSignalementService" class="fr.paris.lutece.plugins.dansmarue.modules.rest.service.ManageSignalementService"/>
-	
-	<bean id="sira-rest.siraRestService" class="fr.paris.lutece.plugins.dansmarue.modules.rest.service.SiraRestService" />
-    <bean id="sira-rest.siraRequestService" class="fr.paris.lutece.plugins.dansmarue.modules.rest.service.SiraRequestService" >	
-		<property name="sha1HashService" ref="sira-rest.sha1HashService" />
-    </bean>
-	
+	<bean id="signalement-rest.manageSignalementService" class="fr.paris.lutece.plugins.dansmarue.modules.rest.service.ManageSignalementService"/>	
 	<!-- REST -->
     <bean id="signalement-rest.signalementRest" class="fr.paris.lutece.plugins.dansmarue.modules.rest.rs.SignalementRest">
     	<property name="signalementRestService" ref="signalement-rest.signalementRestService" />
     	<property name="signRequestService" ref="signalement-rest.signRequestService" />
-    </bean>
-    <bean id="sira-rest.siraRest" class="fr.paris.lutece.plugins.dansmarue.modules.rest.rs.SiraRest">
-    	<property name="siraRestService" ref="sira-rest.siraRestService" />
-    	<property name="siraRequestService" ref="sira-rest.siraRequestService" />
     </bean>
     
     <bean id="sira-rest.sha1HashService"  class="fr.paris.lutece.util.signrequest.security.Sha1HashService" />
