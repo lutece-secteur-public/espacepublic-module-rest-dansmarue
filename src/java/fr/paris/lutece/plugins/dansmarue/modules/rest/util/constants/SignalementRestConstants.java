@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2021, City of Paris
+ * Copyright (c) 2002-2022, City of Paris
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -183,6 +183,9 @@ public final class SignalementRestConstants
 
     /** The Constant JSON_TAG_GUID. */
     public static final String JSON_TAG_GUID = "guid";
+
+    /** The Constant JSON_TAG_SEARCH_BY_NUMBER. */
+    public static final String JSON_TAG_SEARCH_BY_NUMBER = "searchByNumber";
 
     /** The Constant JSON_TAG_ANOMALY_DONE. */
     public static final String JSON_TAG_ANOMALY_DONE = "service fait";

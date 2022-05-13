@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2021, City of Paris
+ * Copyright (c) 2002-2022, City of Paris
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -400,7 +400,7 @@ public class SignalementRestService implements ISignalementRestService
         json.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
 
         List<Signalement> listSignalement = _signalementService.findAllSignalementInPerimeterWithInfo( Double.parseDouble( strLatitude ),
-                Double.parseDouble( strLongitude ), Integer.valueOf( strRadius ) );
+                Double.parseDouble( strLongitude ), Integer.valueOf( strRadius ), StringUtils.EMPTY );
 
         AppLogService.info( "module-signalement-rest getIncidentStats" );
         int nOnGoingIncidents = 0;
@@ -607,6 +607,11 @@ public class SignalementRestService implements ISignalementRestService
         String strRadius = AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_RADIUS );
         String guid = jsonSrc.has( SignalementRestConstants.JSON_TAG_GUID ) ? jsonSrc.getString( SignalementRestConstants.JSON_TAG_GUID ) : null;
 
+        // not empty if case Android searchByNumber
+        String specificSignalementNumberSearch = jsonSrc.has( SignalementRestConstants.JSON_TAG_SEARCH_BY_NUMBER )
+                ? jsonSrc.getString( SignalementRestConstants.JSON_TAG_SEARCH_BY_NUMBER )
+                : StringUtils.EMPTY;
+
         if ( StringUtils.isBlank( strLatitude ) || StringUtils.isBlank( strLongitude ) || StringUtils.isBlank( strRadius ) )
         {
             ErrorSignalement error = new ErrorSignalement( );
@@ -617,7 +622,7 @@ public class SignalementRestService implements ISignalementRestService
         }
 
         List<Signalement> listSignalement = _signalementService.findAllSignalementInPerimeterWithInfo( Double.parseDouble( strLatitude ),
-                Double.parseDouble( strLongitude ), Integer.valueOf( strRadius ) );
+                Double.parseDouble( strLongitude ), Integer.valueOf( strRadius ), specificSignalementNumberSearch );
 
         List<Signalement> listSignalementSorted = getSignalementListSorted( Double.parseDouble( strLatitude ), Double.parseDouble( strLongitude ),
                 listSignalement );
@@ -1231,14 +1236,12 @@ public class SignalementRestService implements ISignalementRestService
 
                                     request.getSession( ).setAttribute( PARAMETER_WEBSERVICE_CHOSEN_MESSAGE, chosenMessage );
 
-                                    _manageSignalementService.manageStatusWithWorkflow( request, jsonObject, jsonAnswer, id, signalementreference, status, null,
-                                            motifRejetAutre, strDateProgrammee, idTypeAnomalie, comment, emailActeur );
-
                                     String photoSF = null;
                                     if ( answer.containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_PHOTO ) )
                                     {
                                         photoSF = answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_PHOTO ).equals( PARAMETER_NULL ) ? null
                                                 : answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_PHOTO );
+                                        AppLogService.info( photoSF );
                                     }
 
                                     if ( ( photoSF != null ) && SignalementRestConstants.JSON_TAG_ANOMALY_DONE.equals( status ) )
@@ -1270,6 +1273,9 @@ public class SignalementRestService implements ISignalementRestService
                                         _photoService.insert( photo );
 
                                     }
+
+                                    _manageSignalementService.manageStatusWithWorkflow( request, jsonObject, jsonAnswer, id, signalementreference, status, null,
+                                            motifRejetAutre, strDateProgrammee, idTypeAnomalie, comment, emailActeur );
 
                                 }
 
