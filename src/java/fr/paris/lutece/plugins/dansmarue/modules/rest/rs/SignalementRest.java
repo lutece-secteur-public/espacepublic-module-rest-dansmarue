@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2021, City of Paris
+ * Copyright (c) 2002-2022, City of Paris
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1549,14 +1549,14 @@ public class SignalementRest
 
     /*
      * Gets the anomalie by number.
-     * 
+     *
      * Ancienne méthode de récupération sans le guid. Permet aux users n'ayant pas fait la MAJ de l'appli de pouvoir utiliser la recherche sans guid (mais avec
      * le bug de suivi: DMR-2092)
      *
      * @param number the number
-     * 
+     *
      * @param request the request
-     * 
+     *
      * @return the anomalie by number
      */
     @GET

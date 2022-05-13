@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2021, City of Paris
+ * Copyright (c) 2002-2022, City of Paris
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -325,6 +325,7 @@ public class ManageSignalementService
                         request.getSession( ).setAttribute( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET, motifRejetAutre );
                         workflowService.doProcessAction( id, Signalement.WORKFLOW_RESOURCE_TYPE,
                                 SignalementRestConstants.ACTION_TRANSFERED_STATE_WEBSERVICE_REJECTED, null, request, request.getLocale( ), true );
+                        request.getSession( ).removeAttribute( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET );
                     }
                     else
                     {
@@ -334,6 +335,7 @@ public class ManageSignalementService
                             request.getSession( ).setAttribute( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET, motifRejetAutre );
                             workflowService.doProcessAction( id, Signalement.WORKFLOW_RESOURCE_TYPE,
                                     SignalementRestConstants.ACTION_PROGRAMMED_STATE_WEBSERVICE_REJECTED, null, request, request.getLocale( ), true );
+                            request.getSession( ).removeAttribute( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET );
                         }
                         else
                         {
