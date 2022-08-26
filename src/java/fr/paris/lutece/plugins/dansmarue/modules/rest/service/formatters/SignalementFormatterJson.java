@@ -166,6 +166,7 @@ public class SignalementFormatterJson implements IFormatter<Signalement>
 
             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_ALIAS, signalement.getTypeSignalement( ).getAliasMobileDefault( ) );
             String strStatus = "O";
+            int nStateId = 0;
 
             // set the state of the signalement with the workflow
             WorkflowService workflowService = WorkflowService.getInstance( );
@@ -179,7 +180,7 @@ public class SignalementFormatterJson implements IFormatter<Signalement>
                 {
                     State state = workflowService.getState( signalement.getId( ).intValue( ), Signalement.WORKFLOW_RESOURCE_TYPE, workflowId, null );
 
-                    int nStateId = state.getId( );
+                    nStateId = state.getId( );
 
                     // strStatus = O (Ouvert)
                     // strStatus = R (Résolu)
@@ -214,6 +215,8 @@ public class SignalementFormatterJson implements IFormatter<Signalement>
             }
 
             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_STATE, strStatus );
+            jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_STATE_ID, nStateId );
+
             for ( Adresse adresse : signalement.getAdresses( ) )
             {
                 jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_ADDRESS, adresse.getAdresse( ) );

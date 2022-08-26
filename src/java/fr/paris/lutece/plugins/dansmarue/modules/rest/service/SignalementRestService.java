@@ -61,7 +61,9 @@ import org.apache.commons.lang.StringUtils;
 
 import com.sun.jersey.core.header.FormDataContentDisposition;
 
+import fr.paris.lutece.plugins.dansmarue.business.entities.Actualite;
 import fr.paris.lutece.plugins.dansmarue.business.entities.Adresse;
+import fr.paris.lutece.plugins.dansmarue.business.entities.Aide;
 import fr.paris.lutece.plugins.dansmarue.business.entities.Arrondissement;
 import fr.paris.lutece.plugins.dansmarue.business.entities.MessageTypologie;
 import fr.paris.lutece.plugins.dansmarue.business.entities.NotificationSignalementUserMultiContents;
@@ -88,7 +90,9 @@ import fr.paris.lutece.plugins.dansmarue.modules.rest.service.formatters.Signale
 import fr.paris.lutece.plugins.dansmarue.modules.rest.service.formatters.SignalementRestDTOFormatterJson;
 import fr.paris.lutece.plugins.dansmarue.modules.rest.util.constants.SignalementRestConstants;
 import fr.paris.lutece.plugins.dansmarue.modules.rest.util.exception.ParseSignalementFromJSONException;
+import fr.paris.lutece.plugins.dansmarue.service.IActualiteService;
 import fr.paris.lutece.plugins.dansmarue.service.IAdresseService;
+import fr.paris.lutece.plugins.dansmarue.service.IAideService;
 import fr.paris.lutece.plugins.dansmarue.service.IArrondissementService;
 import fr.paris.lutece.plugins.dansmarue.service.IMessageTypologieService;
 import fr.paris.lutece.plugins.dansmarue.service.IObservationRejetService;
@@ -209,6 +213,14 @@ public class SignalementRestService implements ISignalementRestService
     @Inject
     private IMessageTypologieService _messageTypologieService;
 
+    /** The actualite service. */
+    @Inject
+    private IActualiteService _actualiteService;
+
+    /** The aide service. */
+    @Inject
+    private IAideService _aideService;
+
     /** The Constant PARAMETER_WEBSERVICE_COMMENT_VALUE. */
     private static final String PARAMETER_WEBSERVICE_COMMENT_VALUE = "webservice_comment_value";
 
@@ -217,6 +229,9 @@ public class SignalementRestService implements ISignalementRestService
 
     /** The Constant PARAMETER_WEBSERVICE_CHOSEN_MESSAGE. */
     private static final String PARAMETER_WEBSERVICE_CHOSEN_MESSAGE = "chosenMessage";
+
+    /** The Constant PARAMETER_WEBSERVICE_EMAIL_ACTEUR. */
+    private static final String PARAMETER_WEBSERVICE_EMAIL_ACTEUR = "emailActeur";
 
     /** The Constant PARAMETER_WEBSERVICE_IS_MESSAGE_TYPO. */
     private static final String PARAMETER_WEBSERVICE_IS_MESSAGE_TYPO = "isMessageTypo";
@@ -610,7 +625,7 @@ public class SignalementRestService implements ISignalementRestService
         // not empty if case Android searchByNumber
         String specificSignalementNumberSearch = jsonSrc.has( SignalementRestConstants.JSON_TAG_SEARCH_BY_NUMBER )
                 ? jsonSrc.getString( SignalementRestConstants.JSON_TAG_SEARCH_BY_NUMBER )
-                : StringUtils.EMPTY;
+                        : StringUtils.EMPTY;
 
         if ( StringUtils.isBlank( strLatitude ) || StringUtils.isBlank( strLongitude ) || StringUtils.isBlank( strRadius ) )
         {
@@ -1184,6 +1199,11 @@ public class SignalementRestService implements ISignalementRestService
 
                     signalement = _signalementService.getSignalement( id );
 
+                    Integer workflowId = _signalementWorkflowService.getSignalementWorkflowId( );
+                    WorkflowService workflowService = WorkflowService.getInstance( );
+                    int stateid = workflowService.getState( id, Signalement.WORKFLOW_RESOURCE_TYPE, workflowId, null ).getId( );
+
+
                     if ( signalement == null )
                     {
                         jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ERROR_ERROR,
@@ -1203,7 +1223,7 @@ public class SignalementRestService implements ISignalementRestService
                                 : answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_CHOSEN_MESSAGE );
                         String emailActeur = answer.containsKey( SignalementRestConstants.JSON_TAG_EMAIL )
                                 ? answer.getString( SignalementRestConstants.JSON_TAG_EMAIL )
-                                : null;
+                                        : null;
 
                         String signalementreference = _signalementService.getSignalementReference( StringUtils.EMPTY, signalement );
 
@@ -1216,6 +1236,16 @@ public class SignalementRestService implements ISignalementRestService
                             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
                         }
 
+
+
+                        else if ( stateid == AppPropertiesService.getPropertyInt( ID_STATE_ETAT_INITIAL, -1 ) )
+                        {
+                            jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ERROR_ERROR,
+                                    I18nService.getLocalizedString( SignalementRestConstants.ERROR_MESSAGE_INITIAL_WRONG_STATUS, request.getLocale( ) ) );
+                            jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
+                        }
+
+
                         else
                             if ( token.equals( signalement.getToken( ) ) )
                             {
@@ -1225,16 +1255,20 @@ public class SignalementRestService implements ISignalementRestService
                                 {
                                     motifRejetAutre = !StringUtils.isEmpty( answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET ) )
                                             ? answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET )
-                                            : StringUtils.EMPTY;
+                                                    : StringUtils.EMPTY;
                                     strDateProgrammee = StringUtils
                                             .isNotEmpty( answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION ) )
-                                                    ? answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION )
+                                            ? answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION )
                                                     : StringUtils.EMPTY;
                                     long idTypeAnomalie = PARAMETER_NULL.equals( answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE ) )
                                             ? -1
-                                            : answer.getLong( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE );
+                                                    : answer.getLong( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE );
 
                                     request.getSession( ).setAttribute( PARAMETER_WEBSERVICE_CHOSEN_MESSAGE, chosenMessage );
+
+                                    if(StringUtils.isNotBlank( emailActeur )) {
+                                        request.getSession( ).setAttribute( PARAMETER_WEBSERVICE_EMAIL_ACTEUR, emailActeur );
+                                    }
 
                                     String photoSF = null;
                                     if ( answer.containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_PHOTO ) )
@@ -1316,7 +1350,7 @@ public class SignalementRestService implements ISignalementRestService
                 && jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER ).containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_COMMENT )
                 && jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER ).containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET )
                 && jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER )
-                        .containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION )
+                .containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION )
                 && jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER ).containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE );
     }
 
@@ -1332,8 +1366,8 @@ public class SignalementRestService implements ISignalementRestService
         String status = jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER ).getString( SignalementRestConstants.JSON_TAG_STATUS );
         String idTypeAnomalie = jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER )
                 .containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE )
-                        ? jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER )
-                                .getString( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE )
+                ? jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER )
+                        .getString( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE )
                         : null;
 
         if ( SignalementRestConstants.JSON_TAG_ANOMALY_REQUALIFIED.equals( status ) && StringUtils.isNumeric( idTypeAnomalie ) )
@@ -1562,6 +1596,55 @@ public class SignalementRestService implements ISignalementRestService
     }
 
     /**
+     * Gets the actualites list json for source.
+     *
+     * @param mobileVersionActualite
+     *             new list version in mobile application
+     * @return the actualites list json for source
+     */
+    public String getActualiteListJson( int mobileVersionActualite )
+    {
+        _actualiteService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_ACTUALITE_BEAN );
+
+        int currentNewsVersion = _actualiteService.getVersionActualite( );
+
+        List<Actualite> lstActualite = _actualiteService.getActualiteWithVersion( mobileVersionActualite, currentNewsVersion );
+
+        JSONObject jsonObject = new JSONObject( );
+        jsonObject.accumulate( SignalementRestConstants.JSON_TAG_REQUEST, SignalementRestConstants.REQUEST_TYPE_NEWS_LIST );
+
+        JSONObject jsonAnswer = new JSONObject( );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_CATEGORIES_VERSION, currentNewsVersion );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ACTUALITE, lstActualiteToString( lstActualite ) );
+
+        jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
+
+        return jsonObject.toString( );
+    }
+
+    public String getAideListJson( int versionAide )
+    {
+        _aideService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_AIDE_BEAN );
+
+        int currentAideVersion = _aideService.getVersionAide( );
+
+        List<Aide> lstAide = _aideService.getAideWithVersion( versionAide );
+
+        JSONObject jsonObject = new JSONObject( );
+        jsonObject.accumulate( SignalementRestConstants.JSON_TAG_REQUEST, SignalementRestConstants.REQUEST_AIDES_LIST );
+
+        JSONObject jsonAnswer = new JSONObject( );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_CATEGORIES_VERSION, currentAideVersion );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_AIDES, lstAideToString( lstAide ) );
+
+        jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
+
+        return jsonObject.toString( );
+    }
+
+    /**
      * Gets the anomalie by number.
      *
      * @param number
@@ -1663,6 +1746,66 @@ public class SignalementRestService implements ISignalementRestService
 
         return result;
     }
+
+    private String lstActualiteToString( List<Actualite> lstActualite )
+    {
+        JSONArray actArr = new JSONArray();
+
+        String result = "";
+
+        if (!lstActualite.isEmpty( ))
+        {
+            for (Actualite actualite : lstActualite)
+            {
+                JSONObject json = new JSONObject();
+
+                json.put("id", actualite.getId());
+                json.put("libelle", actualite.getLibelle( ));
+                json.put("texte", actualite.getTexte( ));
+                json.put("image_url", actualite.getImageUrl( ));
+                json.put("actif", actualite.getActif( ));
+                json.put("ordre", actualite.getOrdre( ));
+
+                actArr.add(json);
+
+            }
+        }
+
+        result = actArr.toString( );
+
+        return result;
+    }
+
+    private String lstAideToString( List<Aide> lstAide )
+    {
+        JSONArray aideArr = new JSONArray();
+
+        String result = "";
+
+        if (!lstAide.isEmpty( ))
+        {
+            for (Aide aide : lstAide)
+            {
+                JSONObject json = new JSONObject();
+
+                json.accumulate("id", aide.getId());
+                json.accumulate("libelle", aide.getLibelle( ));
+                json.accumulate("hypertexte_url", aide.getHypertexteUrl( ));
+                json.accumulate("image_url", aide.getImageUrl( ));
+                json.accumulate("actif", aide.getActif( ));
+                json.accumulate("ordre", aide.getOrdre( ));
+
+                aideArr.add(json);
+
+            }
+        }
+
+        result = aideArr.toString( );
+
+        return result;
+    }
+
+
 
     /**
      * Xml representation of type report.
