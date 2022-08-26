@@ -256,6 +256,9 @@ public final class SignalementRestConstants
     /** The Constant JSON_TAG_INCIDENT_STATE. */
     public static final String JSON_TAG_INCIDENT_STATE = "state";
 
+    /** The Constant JSON_TAG_INCIDENT_STATE_ID. */
+    public static final String JSON_TAG_INCIDENT_STATE_ID = "stateId";
+
     /** The Constant JSON_TAG_INCIDENT_ADDRESS. */
     public static final String JSON_TAG_INCIDENT_ADDRESS = "address";
 
@@ -378,19 +381,36 @@ public final class SignalementRestConstants
     /** The Constant JSON_TAG_CATEGORIES_NAME. */
     public static final String JSON_TAG_CATEGORIES_NAME = "name";
 
-    /** The Constant JSON_TAG_CATEGORIES_PARENT_ID. */
+    /**
+     * The Constant JSON_TAG_CATEGORIES_PARENT_ID.
+     */
     public static final String JSON_TAG_CATEGORIES_PARENT_ID = "parent_id";
 
-    /** The Constant JSON_TAG_CATEGORIES. */
+    /**
+     * The Constant JSON_TAG_CATEGORIES.
+     */
     public static final String JSON_TAG_CATEGORIES = "categories";
 
-    /** The Constant JSON_TAG_CATEGORIES_VERSION. */
+    /**
+     * The Constant JSON_TAG_ACTUALITE.
+     */
+    public static final String JSON_TAG_ACTUALITE = "actualites";
+
+    public static final String JSON_TAG_AIDES = "aides";
+
+    /**
+     * The Constant JSON_TAG_CATEGORIES_VERSION.
+     */
     public static final String JSON_TAG_CATEGORIES_VERSION = "version";
 
-    /** The Constant JSON_TAG_CATEGORIES_CURVERSION. */
+    /**
+     * The Constant JSON_TAG_CATEGORIES_CURVERSION.
+     */
     public static final String JSON_TAG_CATEGORIES_CURVERSION = "curVersion";
 
-    /** The Constant JSON_TAG_CATEGORIES_CURVERSION_MOBILE_PROD. */
+    /**
+     * The Constant JSON_TAG_CATEGORIES_CURVERSION_MOBILE_PROD.
+     */
     public static final String JSON_TAG_CATEGORIES_CURVERSION_MOBILE_PROD = "curVersionMobileProd";
 
     /** The Constant JSON_TAG_CATEGORIES_ALIAS. */
@@ -437,19 +457,36 @@ public final class SignalementRestConstants
     /** The Constant REQUEST_TYPE_CHANGE_INCIDENT. */
     public static final String REQUEST_TYPE_CHANGE_INCIDENT = "changeIncident";
 
-    /** The Constant REQUEST_TYPE_INCIDENT_PHOTOS. */
+    /**
+     * The Constant REQUEST_TYPE_INCIDENT_PHOTOS.
+     */
     public static final String REQUEST_TYPE_INCIDENT_PHOTOS = "getIncidentPhotos";
 
-    /** The Constant REQUEST_TYPE_CATEGORIES_LIST. */
+    /**
+     * The Constant REQUEST_TYPE_CATEGORIES_LIST.
+     */
     public static final String REQUEST_TYPE_CATEGORIES_LIST = "getCategories";
 
-    /** The Constant REQUEST_TYPE_CHANGE_STATUS. */
+    /**
+     * The Constant REQUEST_TYPE_NEWS_LIST.
+     */
+    public static final String REQUEST_TYPE_NEWS_LIST = "getActualite";
+
+    public static final String REQUEST_AIDES_LIST = "getAides";
+
+    /**
+     * The Constant REQUEST_TYPE_CHANGE_STATUS.
+     */
     public static final String REQUEST_TYPE_CHANGE_STATUS = "changeStatus";
 
-    /** The Constant REQUEST_TYPE_ADD_ANOMALIE. */
+    /**
+     * The Constant REQUEST_TYPE_ADD_ANOMALIE.
+     */
     public static final String REQUEST_TYPE_ADD_ANOMALIE = "addAnomalie";
 
-    /** The Constant REQUEST_TYPE_CONGRATULATE_ANOMALIE. */
+    /**
+     * The Constant REQUEST_TYPE_CONGRATULATE_ANOMALIE.
+     */
     public static final String REQUEST_TYPE_CONGRATULATE_ANOMALIE = "congratulateAnomalie";
 
     /** The Constant REQUEST_TYPE_SUBSCRIBE_ANOMALIE. */
@@ -513,6 +550,19 @@ public final class SignalementRestConstants
 
     /** The Constant PARAMETER_ADRESSE_SERVICE_BEAN. */
     public static final String PARAMETER_ADRESSE_SERVICE_BEAN = "adresseSignalementService";
+
+    /** The Constant PARAMETER_PHOTO_SERVICE_BEAN. */
+    public static final String PARAMETER_ACTUALITE_BEAN = "actualiteService";
+
+    /** The Constant PARAMETER_ADRESSE_SERVICE_BEAN. */
+    public static final String PARAMETER_AIDE_BEAN = "aideService";
+
+    /** The Constant PARAMETERS_VERSION_ACTUALITE. */
+    public static final String PARAMETERS_VERSION_ACTUALITE = "versionActualite";
+
+    /** The Constant PARAMETERS_VERSION_AIDE. */
+    public static final String PARAMETERS_VERSION_AIDE = "versionAide";
+
     public static final String PARAMETER_NUMBER = "number";
 
     public static final String PARAMETER_GUID = "guid";
@@ -836,6 +886,10 @@ public final class SignalementRestConstants
 
     /** The Constant ERROR_MESSAGE_DIFFERENT_STATUS. */
     public static final String ERROR_MESSAGE_DIFFERENT_STATUS = "module.dansmarue.rest.webservice_listener.error.different_status";
+
+    /** The Constant ERROR_MESSAGE_INITIAL_WRONG_STATUS. */
+    public static final String ERROR_MESSAGE_INITIAL_WRONG_STATUS = "module.dansmarue.rest.webservice_listener.error.initial.wrong_status";
+
 
     /** The Constant ERROR_MESSAGE_DONE_WRONG_STATUS. */
     public static final String ERROR_MESSAGE_DONE_WRONG_STATUS = "module.dansmarue.rest.webservice_listener.error.done.wrong_status";
