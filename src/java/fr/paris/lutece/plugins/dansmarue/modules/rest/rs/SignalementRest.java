@@ -33,11 +33,39 @@
  */
 package fr.paris.lutece.plugins.dansmarue.modules.rest.rs;
 
-import com.sun.jersey.core.header.FormDataContentDisposition;
-import com.sun.jersey.multipart.BodyPartEntity;
-import com.sun.jersey.multipart.FormDataParam;
-import com.sun.jersey.multipart.MultiPart;
-import fr.paris.lutece.plugins.dansmarue.business.entities.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.Encoded;
+import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+
+import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.annotate.JsonAutoDetect.Visibility;
+import org.codehaus.jackson.annotate.JsonMethod;
+import org.codehaus.jackson.map.DeserializationConfig;
+import org.codehaus.jackson.map.DeserializationConfig.Feature;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import fr.paris.lutece.plugins.dansmarue.business.entities.Adresse;
+import fr.paris.lutece.plugins.dansmarue.business.entities.PhotoDMR;
+import fr.paris.lutece.plugins.dansmarue.business.entities.Signalement;
+import fr.paris.lutece.plugins.dansmarue.business.entities.Source;
+import fr.paris.lutece.plugins.dansmarue.business.entities.TypeSignalement;
 import fr.paris.lutece.plugins.dansmarue.business.exceptions.AlreadyFollowedException;
 import fr.paris.lutece.plugins.dansmarue.business.exceptions.InvalidStateActionException;
 import fr.paris.lutece.plugins.dansmarue.modules.rest.pojo.ErrorSignalement;
@@ -64,22 +92,6 @@ import fr.paris.lutece.util.signrequest.RequestAuthenticator;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
-import org.apache.commons.lang.StringUtils;
-import org.codehaus.jackson.annotate.JsonAutoDetect.Visibility;
-import org.codehaus.jackson.annotate.JsonMethod;
-import org.codehaus.jackson.map.DeserializationConfig;
-import org.codehaus.jackson.map.DeserializationConfig.Feature;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
 
 /**
  * SignalementRest.
@@ -383,147 +395,6 @@ public class SignalementRest
         return _signalementRestService.updatePictureIncident( request, requestBodyStream );
     }
 
-    /**
-     * Method to get picture and update signalement.
-     *
-     * @param request
-     *            the http request
-     * @param uploadedInputStream
-     *            the picture stream
-     * @param fileDetail
-     *            the format file
-     * @param incidentId
-     *            the report id
-     * @return json reponse
-     */
-    @POST
-    @Path( SignalementRestConstants.PATH_API + SignalementRestConstants.SLASH + "photo2" )
-    @Produces( MediaType.APPLICATION_JSON )
-    @Consumes( MediaType.MULTIPART_FORM_DATA )
-    public String updatePictureSignalementCordova( @Context HttpServletRequest request, @FormDataParam( "imgField" ) InputStream uploadedInputStream,
-            @FormDataParam( "imgField" ) FormDataContentDisposition fileDetail, @FormDataParam( "incident_id" ) String incidentId )
-    {
-        return _signalementRestService.updatePictureIncidentCordova( request, uploadedInputStream, fileDetail, incidentId );
-    }
-
-    /**
-     * Black berry get nomenclature.
-     *
-     * @param request
-     *            the http request
-     * @return list category
-     * @deprecated Gets the nomenclature for blackberry
-     */
-    @Deprecated
-    @GET
-    @Path( SignalementRestConstants.PATH_API + SignalementRestConstants.SLASH + SignalementRestConstants.PATH_BLACK_BERRY_CAT )
-    @Produces( MediaType.TEXT_XML )
-    public String blackBerryGetNomenclature( @Context HttpServletRequest request )
-    {
-        return _signalementRestService.getCategoriesListXml( );
-    }
-
-    /**
-     * /**.
-     *
-     * @param strPriorite
-     *            strPriorite
-     * @param strCategorie
-     *            strCategorie
-     * @param photoId
-     *            photoId
-     * @param strIdNomenclature
-     *            strIdNomenclature
-     * @param strDirection
-     *            strDirection
-     * @param strLatitude
-     *            strLatitude
-     * @param strLongitude
-     *            strLongitude
-     * @param strAdresse
-     *            strAdresse
-     * @param strKey
-     *            strKey
-     * @param strEmail
-     *            strEmail
-     * @param strCommentaire
-     *            strCommentaire
-     * @param request
-     *            request
-     * @return answer
-     * @deprecated Method for BlackBerry
-     */
-    @Deprecated
-    @POST
-    @Path( SignalementRestConstants.PATH_API + SignalementRestConstants.SLASH + SignalementRestConstants.PATH_BLACK_BERRY )
-    @Consumes( MediaType.APPLICATION_FORM_URLENCODED )
-    @Produces( MediaType.TEXT_XML )
-    public String blackBerryPostSignalement( @FormParam( "1" ) String strPriorite, @FormParam( "2" ) String strCategorie, @FormParam( "recordId" ) Long photoId,
-            @FormParam( "10" ) String strIdNomenclature, @FormParam( "12" ) String strDirection, @FormParam( "11_x" ) String strLatitude,
-            @FormParam( "11_y" ) String strLongitude, @FormParam( "11_address" ) String strAdresse, @FormParam( "key" ) String strKey,
-            @FormParam( "6" ) String strEmail, @FormParam( "8" ) String strCommentaire, @Context HttpServletRequest request )
-    {
-        Signalement signalement = new Signalement( );
-
-        Priorite priorite = new Priorite( );
-        priorite.setId( Long.valueOf( strPriorite ) );
-        signalement.setPriorite( priorite );
-
-        TypeSignalement typeSignalement = new TypeSignalement( );
-        typeSignalement.setId( 4 );
-        signalement.setTypeSignalement( typeSignalement );
-
-        List<Adresse> pAdresses = new ArrayList<>( );
-        Adresse adresse = new Adresse( );
-        adresse.setLat( Double.parseDouble( strLatitude ) );
-        adresse.setLng( Double.parseDouble( strLongitude ) );
-        adresse.setAdresse( strAdresse );
-        pAdresses.add( adresse );
-        signalement.setAdresses( pAdresses );
-
-        Signaleur signaleur = new Signaleur( );
-        signaleur.setMail( strEmail );
-
-        List<Signaleur> pSignaleurs = new ArrayList<>( );
-        pSignaleurs.add( signaleur );
-        signalement.setSignaleurs( pSignaleurs );
-
-        signalement.setCommentaire( strCommentaire );
-
-        List<PhotoDMR> pPhotos = new ArrayList<>( );
-        pPhotos.add( _signalementRestService.getPictureForBlackBerry( photoId ) );
-        signalement.setPhotos( pPhotos );
-
-        return _signalementRestService.doSaveIncidentForBlackBerry( signalement );
-    }
-
-    /**
-     * Black berry post picture.
-     *
-     * @param multiPart
-     *            the multipart request (containing picture)
-     * @return XML format answer
-     * @deprecated Method to post picture from BlackBerry
-     */
-    @Deprecated
-    @POST
-    @Path( SignalementRestConstants.PATH_API + SignalementRestConstants.SLASH + SignalementRestConstants.PATH_BLACK_BERRY_PICTURE )
-    public String blackBerryPostPicture( MultiPart multiPart )
-    {
-
-        BodyPartEntity bpe = (BodyPartEntity) multiPart.getBodyParts( ).get( 1 ).getEntity( );
-        try
-        {
-            InputStream source = bpe.getInputStream( );
-            _signalementRestService.updatePictureIncidentBlackberry( source );
-        }
-        catch( Exception e )
-        {
-            AppLogService.error( e );
-            return "ko";
-        }
-        return "ok";
-    }
 
     /**
      * archive report rejected.
@@ -1469,17 +1340,22 @@ public class SignalementRest
         {
             for ( PhotoDMR photo : signalement.getPhotos( ) )
             {
+                String token = "";
+                if(StringUtils.isNotBlank( photo.getCheminPhoto( ) )) {
+                    token = "_"+photo.getCheminPhoto( ).split("_")[0];
+                }
+
                 if ( photo.getVue( ).equals( SignalementRestConstants.VUE_PRES ) )
                 {
-                    json.accumulate( "pictureClose", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( ) );
+                    json.accumulate( "pictureClose", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
                 }
                 else if ( photo.getVue( ).equals( SignalementRestConstants.VUE_ENSEMBLE ) )
                 {
-                    json.accumulate( "pictureFar", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( ) );
+                    json.accumulate( "pictureFar", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
                 }
                 else if ( photo.getVue( ).equals( SignalementRestConstants.VUE_SERVICE_FAIT ) )
                 {
-                    json.accumulate( "pictureServiceFait", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( ) );
+                    json.accumulate( "pictureServiceFait", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
                 }
             }
         }
@@ -1516,11 +1392,11 @@ public class SignalementRest
                     ? object.getString( SignalementRestConstants.JSON_TAG_SIGNALEMENT_ID )
                             : null;
 
-                    Integer idSignalement = mapper.readValue( id, Integer.class );
+            Integer idSignalement = mapper.readValue( id, Integer.class );
 
-                    JSONObject response = _signalementRestService.getHistorySignalement( idSignalement, request );
+            JSONObject response = _signalementRestService.getHistorySignalement( idSignalement, request );
 
-                    return mapper.writeValueAsString( response );
+            return mapper.writeValueAsString( response );
         }
         catch( IOException e )
         {
@@ -1607,6 +1483,26 @@ public class SignalementRest
     public String getAnomalieByNumber( @PathParam( SignalementRestConstants.PARAMETER_NUMBER ) String number, @Context HttpServletRequest request )
     {
         return _signalementRestService.getAnomalieByNumber( number, "-1" );
+    }
+
+
+    /**
+     * Gets list of anomalies belongs to the tour sheet.
+     *
+     * @param idFDT id of the tour sheet
+     *
+     * @param request the request
+     *
+     * @return json response
+     */
+    @GET
+    @Produces( {
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
+    } )
+    @Path( "searchIncidentsByIdFdt/{idFDT}" )
+    public String searchIncidentsByIdFdt( @PathParam( "idFDT" ) int idFDT, @Context HttpServletRequest request )
+    {
+        return _signalementRestService.getAnomaliesByIdFDT( idFDT);
     }
 
     /**

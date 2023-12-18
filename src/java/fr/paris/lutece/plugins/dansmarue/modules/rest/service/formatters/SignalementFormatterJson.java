@@ -167,6 +167,8 @@ public class SignalementFormatterJson implements IFormatter<Signalement>
             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_ALIAS, signalement.getTypeSignalement( ).getAliasMobileDefault( ) );
             String strStatus = "O";
             int nStateId = 0;
+            String stateName="";
+
 
             // set the state of the signalement with the workflow
             WorkflowService workflowService = WorkflowService.getInstance( );
@@ -178,9 +180,14 @@ public class SignalementFormatterJson implements IFormatter<Signalement>
 
                 if ( workflowId != null )
                 {
-                    State state = workflowService.getState( signalement.getId( ).intValue( ), Signalement.WORKFLOW_RESOURCE_TYPE, workflowId, null );
-
-                    nStateId = state.getId( );
+                    if(( signalement.getStateName( ) == null ) && ( signalement.getIdState( ) <= 0 )) {
+                        State state = workflowService.getState( signalement.getId( ).intValue( ), Signalement.WORKFLOW_RESOURCE_TYPE, workflowId, null );
+                        stateName = state.getName( );
+                        nStateId = state.getId( );
+                    } else {
+                        stateName = signalement.getStateName( );
+                        nStateId = signalement.getIdState( );
+                    }
 
                     // strStatus = O (Ouvert)
                     // strStatus = R (Résolu)
@@ -216,6 +223,8 @@ public class SignalementFormatterJson implements IFormatter<Signalement>
 
             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_STATE, strStatus );
             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_STATE_ID, nStateId );
+            jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_STATE_NAME, stateName );
+
 
             for ( Adresse adresse : signalement.getAdresses( ) )
             {
@@ -228,6 +237,7 @@ public class SignalementFormatterJson implements IFormatter<Signalement>
             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_COMMENTAIRE_AGENT, signalement.getCommentaireAgentTerrain( ) );
             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_DATE, DateUtils.convertDate( signalement.getDateCreation( ) ) );
             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_HOUR, DateUtils.convertHour( signalement.getHeureCreation( ) ) );
+            jsonObject.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT_PRECISION_TERRAIN, signalement.getPrecisionTerrain( ) );
 
             JSONObject jsonObjectPictures = new JSONObject( );
 
@@ -238,19 +248,24 @@ public class SignalementFormatterJson implements IFormatter<Signalement>
 
             for ( PhotoDMR photo : listPhotos )
             {
+                String token = "";
+                if(StringUtils.isNotBlank( photo.getCheminPhoto( ) )) {
+                    token = "_"+photo.getCheminPhoto( ).split("_")[0];
+                }
+
                 if ( photo.getVue( ).equals( SignalementRestConstants.VUE_PRES ) )
                 {
-                    jsonPictureClose.element( AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( ) );
+                    jsonPictureClose.element( AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
                 }
                 else
                     if ( photo.getVue( ).equals( SignalementRestConstants.VUE_ENSEMBLE ) )
                     {
-                        jsonPictureFar.element( AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( ) );
+                        jsonPictureFar.element( AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
                     }
                     else
                         if ( photo.getVue( ).equals( SignalementRestConstants.VUE_SERVICE_FAIT ) )
                         {
-                            jsonPictureDone.element( AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( ) );
+                            jsonPictureDone.element( AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
                         }
             }
 
