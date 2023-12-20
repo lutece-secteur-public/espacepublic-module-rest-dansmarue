@@ -38,7 +38,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -50,6 +49,7 @@ import javax.servlet.http.HttpSession;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -104,7 +104,7 @@ public abstract class AbstractUploadHandler extends AbstractAsynchronousUploadHa
     private static final String HANDLER_NAME = "DansmarueAsynchronousUploadHandler";
 
     /** The extension list. */
-    private static List<String> _extensionList = Arrays.asList( "jpeg", "png", "jpg" );
+    private static String[] _extensionList = { "jpeg", "png", "jpg" };
 
     /**
      * Constructor.
@@ -166,9 +166,9 @@ public abstract class AbstractUploadHandler extends AbstractAsynchronousUploadHa
 
             for ( FileItem fileItem : listFileItemsToUpload )
             {
-                if ( !_extensionList.contains( FilenameUtils.getExtension( fileItem.getName( ).toLowerCase( ) ) ) )
+                if ( !ArrayUtils.contains( _extensionList, FilenameUtils.getExtension( fileItem.getName( ).toLowerCase( ) ) ) )
                 {
-                    return I18nService.getLocalizedString( ERROR_EXTENSION, locale ) + StringUtils.join( _extensionList.toArray( ), ", " );
+                    return I18nService.getLocalizedString( ERROR_EXTENSION, locale ) + StringUtils.join( _extensionList, ", " );
                 }
             }
         }

@@ -39,8 +39,10 @@ import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.servlet.http.HttpServletRequest;
 
+import fr.paris.lutece.plugins.dansmarue.utils.IListUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.lang.ArrayUtils;
@@ -56,7 +58,7 @@ import fr.paris.lutece.plugins.dansmarue.service.IObservationRejetService;
 import fr.paris.lutece.plugins.dansmarue.service.ISignalementService;
 import fr.paris.lutece.plugins.dansmarue.service.ITypeSignalementService;
 import fr.paris.lutece.plugins.dansmarue.service.IWorkflowService;
-import fr.paris.lutece.plugins.dansmarue.utils.ListUtils;
+import fr.paris.lutece.plugins.dansmarue.utils.impl.ListUtils;
 import fr.paris.lutece.plugins.workflowcore.business.state.State;
 import fr.paris.lutece.plugins.workflowcore.service.action.IActionService;
 import fr.paris.lutece.plugins.workflowcore.service.state.IStateService;
@@ -195,6 +197,10 @@ public class ManageSignalementApp implements XPageApplication
     /** The state service. */
     @Inject
     private IStateService _stateService;
+
+    /** The date utils. */
+    // UTILS
+    private transient IListUtils _listUtils = SpringContextService.getBean( "signalement.listUtils" );
 
     /**
      * {@inheritDoc}
@@ -424,7 +430,7 @@ public class ManageSignalementApp implements XPageApplication
 
         // get all the type signalement
         List<TypeSignalement> types = _typeSignalementService.getAllTypeSignalementActif( );
-        ReferenceList listeTypes = ListUtils.toReferenceList( types, "id", "formatTypeSignalement", "", false );
+        ReferenceList listeTypes = _listUtils.toReferenceList( types, "id", "formatTypeSignalement", "", false );
         model.put( MARK_TYPE_LIST, listeTypes );
 
     }

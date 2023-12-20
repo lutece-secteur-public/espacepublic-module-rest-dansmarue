@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><plug-in>
     <name>signalement-rest</name>
     <class>fr.paris.lutece.portal.service.plugin.PluginDefaultImplementation</class>
-    <version>6.11.3-SNAPSHOT</version>
+    <version>7.1.0</version>
     <description>module.dansmarue.rest.module.description</description>
     <documentation/>
     <installation/>

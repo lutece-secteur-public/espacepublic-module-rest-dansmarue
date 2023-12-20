@@ -35,7 +35,8 @@ package fr.paris.lutece.plugins.dansmarue.modules.rest.util.constants;
 
 import java.util.List;
 
-import fr.paris.lutece.plugins.dansmarue.utils.SignalementUtils;
+import fr.paris.lutece.plugins.dansmarue.utils.ISignalementUtils;
+import fr.paris.lutece.portal.service.spring.SpringContextService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 
 /**
@@ -100,7 +101,7 @@ public final class SignalementRestConstants
     public static final String SIGNALEMENT_PREFIX_KEY = "signalement.prefix.origin";
 
     /** The Constant SIGNALEMENT_PREFIXES. */
-    public static final List<String> SIGNALEMENT_PREFIXES = SignalementUtils.getProperties( SIGNALEMENT_PREFIX_KEY );
+    public static final List<String> SIGNALEMENT_PREFIXES = ( ( ISignalementUtils ) SpringContextService.getBean( "signalement.signalementUtils" ) ).getProperties( SIGNALEMENT_PREFIX_KEY );
 
     /** The Constant MOBILE_STATE_RESOLVED. */
     public static final String MOBILE_STATE_RESOLVED = "R";
@@ -129,6 +130,15 @@ public final class SignalementRestConstants
 
     /** The Constant JSON_TAG_INCIDENTS. */
     public static final String JSON_TAG_INCIDENTS = "incidents";
+
+    /** The Constant JSON_TAG_ID_FDT_SERCH. */
+    public static final String JSON_TAG_ID_FDT_SERCH = "idFDTSearch";
+
+    /** The Constant JSON_TAG_INFO_AVANT_TOURNEE. */
+    public static final String JSON_TAG_INFO_AVANT_TOURNEE = "infosAvantTournee";
+
+    /** The Constant JSON_TAG_INFO_APRES_TOURNEE. */
+    public static final String JSON_TAG_INFO_APRES_TOURNEE = "infosApresTournee";
 
     /** The Constant JSON_TAG_POSITION. */
     public static final String JSON_TAG_POSITION = "position";
@@ -250,6 +260,9 @@ public final class SignalementRestConstants
     /** The Constant JSON_TAG_SIGNALEMENT_ID. */
     public static final String JSON_TAG_SIGNALEMENT_ID = "idSignalement";
 
+    /** The Constant JSON_TAG_FDT_ID. */
+    public static final String JSON_TAG_FDT_ID = "idFDT";
+
     /** The Constant JSON_TAG_INCIDENT_CATEGORIE_ID. */
     public static final String JSON_TAG_INCIDENT_CATEGORIE_ID = "categoryId";
 
@@ -259,6 +272,9 @@ public final class SignalementRestConstants
     /** The Constant JSON_TAG_INCIDENT_STATE_ID. */
     public static final String JSON_TAG_INCIDENT_STATE_ID = "stateId";
 
+    /** The Constant JSON_TAG_INCIDENT_STATE_NAME. */
+    public static final String JSON_TAG_INCIDENT_STATE_NAME = "stateName";
+
     /** The Constant JSON_TAG_INCIDENT_ADDRESS. */
     public static final String JSON_TAG_INCIDENT_ADDRESS = "address";
 
@@ -267,6 +283,12 @@ public final class SignalementRestConstants
 
     /** The Constant JSON_TAG_INCIDENT_COMMENTAIRE_AGENT. */
     public static final String JSON_TAG_INCIDENT_COMMENTAIRE_AGENT = "commentaireAgent";
+
+    /** The Constant JSON_TAG_INCIDENT_PRECISION_TERRAIN. */
+    public static final String JSON_TAG_INCIDENT_PRECISION_TERRAIN = "precisionsTerrain";
+
+    /** The Constant JSON_TAG_FDT_INFO_APRES_TOURNEE. */
+    public static final String JSON_TAG_FDT_INFO_APRES_TOURNEE = "infosApresTournee";
 
     /** The Constant JSON_TAG_INCIDENT_PRIORITE_ID. */
     public static final String JSON_TAG_INCIDENT_PRIORITE_ID = "priorityId";
@@ -442,8 +464,17 @@ public final class SignalementRestConstants
     /** The Constant REQUEST_TYPE_INCIDENT_BY_POSITION. */
     public static final String REQUEST_TYPE_INCIDENT_BY_POSITION = "getIncidentsByPosition";
 
+    /** The Constant REQUEST_SEARCH_INCIDENTS_BY_ID_FDT. */
+    public static final String REQUEST_SEARCH_INCIDENTS_BY_ID_FDT = "searchIncidentsByIdFdt";
+
     /** The Constant REQUEST_TYPE_SAVE_INCIDENT. */
     public static final String REQUEST_TYPE_SAVE_INCIDENT = "saveIncident";
+
+    /** The Constant REQUEST_TYPE_SAVE_PRECISIONS_TERRAIN. */
+    public static final String REQUEST_TYPE_SAVE_PRECISIONS_TERRAIN = "savePrecisionsTerrain";
+
+    /** The Constant REQUEST_TYPE_SAVE_INFO_APRES_TOURNEE. */
+    public static final String REQUEST_TYPE_SAVE_INFO_APRES_TOURNEE = "saveInfosApresTournee";
 
     /** The Constant REQUEST_TYPE_REPORTS. */
     public static final String REQUEST_TYPE_REPORTS = "getReports";
@@ -551,6 +582,12 @@ public final class SignalementRestConstants
     /** The Constant PARAMETER_ADRESSE_SERVICE_BEAN. */
     public static final String PARAMETER_ADRESSE_SERVICE_BEAN = "adresseSignalementService";
 
+    /** The Constant PARAMETER_FDT_SERVICE_BEAN. */
+    public static final String PARAMETER_FDT_SERVICE_BEAN = "feuilleDeTourneeService";
+
+    /** The Constant PARAMETER_SIGNALEMENT_EXPORT_SERVICE_BEAN. */
+    public static final String PARAMETER_SIGNALEMENT_EXPORT_SERVICE_BEAN = "signalementExportService";
+
     /** The Constant PARAMETER_PHOTO_SERVICE_BEAN. */
     public static final String PARAMETER_ACTUALITE_BEAN = "actualiteService";
 
@@ -574,14 +611,8 @@ public final class SignalementRestConstants
     /** The Constant PARAMETERS_HEADER_AUTHENTTOKEN. */
     public static final String PARAMETERS_HEADER_AUTHENTTOKEN = "authentToken";
 
-    /** The Constant PARAMETERS_HEADER_IMG_COMMENT. */
-    public static final String PARAMETERS_HEADER_IMG_COMMENT = "img_comment";
-
-    /** The Constant PARAMETERS_HEADER_INCIDENT_CREATION. */
-    public static final String PARAMETERS_HEADER_INCIDENT_CREATION = "incident_creation";
-
     /** The Constant PARAMETERS_HEADER_INCIDENT_ID. */
-    public static final String PARAMETERS_HEADER_INCIDENT_ID = "incident_id";
+    public static final String PARAMETERS_HEADER_INCIDENT_ID = "incident-id";
 
     /** The Constant PARAMETERS_HEADER_TYPE. */
     public static final String PARAMETERS_HEADER_TYPE = "type";
@@ -626,7 +657,10 @@ public final class SignalementRestConstants
     /** The Constant PROPERTY_INCIDENT_SOURCE_RAMEN. */
     public static final String PROPERTY_INCIDENT_SOURCE_RAMEN = "signalement-rest.source.ramen";
     public static final String ERROR_GET_SIG_BY_NUMBER_NOT_FOUND = "signalement-rest.error.getSigByNumberNotFound";
+    public static final String ERROR_GET_SIG_BY_ID_NOT_FOUND = "signalement-rest.error.getSigByIdNotFound";
     public static final String ERROR_GET_SIG_BY_NUMBER_TOO_OLD = "signalement-rest.error.getSigByNumberTooOld";
+    public static final String ERROR_GET_ANOMALIES_FDT_BY_ID_NOT_FOUND = "signalement-rest.error.getAnomaliesFDTByIdNotFound";
+    public static final String ERROR_GET_FDT_BY_ID_NOT_FOUND = "signalement-rest.error.getFDTByIdNotFound";
 
     /** The Constant MARK_BASE_URL. */
     // MARK
@@ -676,6 +710,9 @@ public final class SignalementRestConstants
 
     /** The Constant ERROR_EMPTY_CATEGORY_ID_PARAMETER. */
     public static final int ERROR_EMPTY_CATEGORY_ID_PARAMETER = 9;
+
+    /** The Constant ERROR_EMPTY_CATEGORY_ID_PARAMETER. */
+    public static final int ERROR_EMPTY_INCIDENT_PRECISION_TERRAIN = 10;
 
     /** The Constant ERROR_BAD_ADDRESS_PARAMETER. */
     public static final int ERROR_BAD_ADDRESS_PARAMETER = 90;
@@ -804,6 +841,9 @@ public final class SignalementRestConstants
     public static final int ERROR_GET_TYPE_SIGNALEMENT_TREE_FOR_SOURCE = 67;
     public static final int ERROR_GET_SIGNALEMENT_BY_NUMBER_NOT_FOUND = 68;
     public static final int ERROR_GET_SIGNALEMENT_BY_NUMBER_TOO_OLD = 69;
+
+    /** The Constant ERROR_GET_FDT_BY_ID. */
+    public static final int ERROR_GET_FDT_BY_ID = 70;
 
     /** The Constant VUE_ENSEMBLE. */
     // CONSTANTS PICTURE

@@ -51,6 +51,8 @@ import static org.mockito.Mockito.when;
 import java.util.Calendar;
 import java.util.List;
 
+import fr.paris.lutece.plugins.dansmarue.utils.ISignalementUtils;
+import fr.paris.lutece.portal.service.spring.SpringContextService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -76,7 +78,7 @@ import fr.paris.lutece.plugins.dansmarue.service.ISignaleurService;
 import fr.paris.lutece.plugins.dansmarue.service.ITypeSignalementService;
 import fr.paris.lutece.plugins.dansmarue.service.IWorkflowService;
 import fr.paris.lutece.plugins.dansmarue.util.constants.SignalementConstants;
-import fr.paris.lutece.plugins.dansmarue.utils.SignalementUtils;
+import fr.paris.lutece.plugins.dansmarue.utils.impl.SignalementUtils;
 import fr.paris.lutece.plugins.unittree.modules.dansmarue.business.sector.Sector;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import net.sf.json.JSONObject;
@@ -174,6 +176,10 @@ public class SignalementRestServiceTest
     @InjectMocks
     SignalementRestService signalementRestService = new SignalementRestService( );
 
+    /** The signalement utils */
+    @InjectMocks
+    ISignalementUtils signalementUtils = (ISignalementUtils) SpringContextService.getBean( "signalement.signalementUtils" );
+
     /**
      * Inits the.
      */
@@ -198,7 +204,7 @@ public class SignalementRestServiceTest
         jsonSrc.accumulate( JSON_TAG_INCIDENT, jsonIncident );
         jsonSrc.accumulate( JSON_TAG_POSITION, jsonPosition );
 
-        possibleSignalementOrigins = CollectionUtils.arrayToList( SIGNALEMENT_POSSIBLE_ORIGINS );
+        possibleSignalementOrigins = ( List<String> ) CollectionUtils.arrayToList( SIGNALEMENT_POSSIBLE_ORIGINS );
 
     }
 
@@ -215,7 +221,7 @@ public class SignalementRestServiceTest
         when( AppPropertiesService.getProperty( Mockito.anyString( ) ) ).thenReturn( "" );
 
         PowerMockito.mockStatic( SignalementUtils.class );
-        when( SignalementUtils.getProperties( Mockito.anyString( ) ) ).thenReturn( possibleSignalementOrigins );
+        when( signalementUtils.getProperties( Mockito.anyString( ) ) ).thenReturn( possibleSignalementOrigins );
 
         // PowerMockito.mockStatic(SignalementConstants.class);
         // when(SignalementConstants.SIGNALEMENT_PREFIXES).thenReturn( possibleSignalementOrigins );
