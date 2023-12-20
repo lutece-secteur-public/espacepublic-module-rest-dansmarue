@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2021, City of Paris
+ * Copyright (c) 2002-2022, City of Paris
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -132,6 +132,24 @@ public interface ISignalementRestService
     String updateIncident( JSONObject jsonSrc, HttpServletRequest request );
 
     /**
+     * This request is sent to update an existing report. This update of the report means to change the precision terrain of the report.
+     *
+     * @param jsonSrc
+     *            json stream
+     * @return json response
+     */
+    String savePrecisionsTerrain( JSONObject jsonSrc );
+
+    /**
+     * This request is sent to update a feuille de tournee. This update of the report means to change the infos apres tournee of the incident
+     *
+     * @param jsonSrc
+     *            json stream
+     * @return json response
+     */
+    String saveInfoApresTournee( JSONObject jsonSrc );
+
+    /**
      * This request is sent to get all activities around an user. An activity can be: add a picture to one incident, confirm an incident... And an incident can
      * have many activities.
      *
@@ -189,27 +207,6 @@ public interface ISignalementRestService
      * @return json response
      */
     String updatePictureIncident( HttpServletRequest request, InputStream requestBodyStream );
-
-    /**
-     * Save report for blackBerry.
-     *
-     * @param signalement
-     *            the report
-     * @return answer
-     * @deprecated
-     */
-    @Deprecated
-    String doSaveIncidentForBlackBerry( Signalement signalement );
-
-    /**
-     * Update picture.
-     *
-     * @param source
-     *            Input stream source
-     * @return answer
-     */
-    @Deprecated
-    String updatePictureIncidentBlackberry( InputStream source );
 
     /**
      * get reject report.

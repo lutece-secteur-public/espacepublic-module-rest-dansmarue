@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2021, City of Paris
+ * Copyright (c) 2002-2022, City of Paris
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,7 +37,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -56,11 +55,10 @@ import fr.paris.lutece.plugins.dansmarue.service.IObservationRejetSignalementSer
 import fr.paris.lutece.plugins.dansmarue.service.IPhotoService;
 import fr.paris.lutece.plugins.dansmarue.service.ISignalementService;
 import fr.paris.lutece.plugins.dansmarue.service.IWorkflowService;
+import fr.paris.lutece.plugins.dansmarue.util.constants.DateConstants;
 import fr.paris.lutece.plugins.dansmarue.util.constants.SignalementConstants;
-import fr.paris.lutece.plugins.dansmarue.utils.DateUtils;
 import fr.paris.lutece.plugins.dansmarue.utils.ImgUtils;
 import fr.paris.lutece.plugins.workflowcore.business.resource.ResourceHistory;
-import fr.paris.lutece.plugins.workflowcore.service.task.ITask;
 import fr.paris.lutece.plugins.workflowcore.service.task.ITaskService;
 import fr.paris.lutece.portal.service.fileupload.FileUploadService;
 import fr.paris.lutece.portal.service.i18n.I18nService;
@@ -107,6 +105,9 @@ public class ManageSignalementService
 
     /** The Constant PARAMETER_WEBSERVICE_ID_TYPE_ANOMALIE. */
     private static final String PARAMETER_WEBSERVICE_ID_TYPE_ANOMALIE = "idTypeAnomalie";
+
+    /** The Constant PARAMETER_WEBSERVICE_EMAIL_ACTEUR. */
+    private static final String PARAMETER_WEBSERVICE_EMAIL_ACTEUR = "emailActeur";
 
     /** The Constant actionStatus. */
     private static final Map<String, String> actionStatus = new HashMap<>( );
@@ -211,7 +212,7 @@ public class ManageSignalementService
                     photoSignalement.setImageThumbnailWithBytes( resizeImage );
                     photoSignalement.setSignalement( signalement );
                     photoSignalement.setVue( 2 );
-                    photoSignalement.setDate( new SimpleDateFormat( DateUtils.DATE_FR ).format( Calendar.getInstance( ).getTime( ) ) );
+                    photoSignalement.setDate( new SimpleDateFormat( DateConstants.DATE_FR ).format( Calendar.getInstance( ).getTime( ) ) );
 
                     // creation of the image in the db linked to the signalement
                     _photoService.insert( photoSignalement );
@@ -325,6 +326,7 @@ public class ManageSignalementService
                         request.getSession( ).setAttribute( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET, motifRejetAutre );
                         workflowService.doProcessAction( id, Signalement.WORKFLOW_RESOURCE_TYPE,
                                 SignalementRestConstants.ACTION_TRANSFERED_STATE_WEBSERVICE_REJECTED, null, request, request.getLocale( ), true );
+                        request.getSession( ).removeAttribute( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET );
                     }
                     else
                     {
@@ -334,6 +336,7 @@ public class ManageSignalementService
                             request.getSession( ).setAttribute( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET, motifRejetAutre );
                             workflowService.doProcessAction( id, Signalement.WORKFLOW_RESOURCE_TYPE,
                                     SignalementRestConstants.ACTION_PROGRAMMED_STATE_WEBSERVICE_REJECTED, null, request, request.getLocale( ), true );
+                            request.getSession( ).removeAttribute( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET );
                         }
                         else
                         {
@@ -344,7 +347,7 @@ public class ManageSignalementService
                         }
                     }
                 }
-                // Status = 'service programme'
+            // Status = 'service programme'
                 else
                     if ( status.equals( SignalementRestConstants.JSON_TAG_ANOMALY_PROGRAMMED ) )
                     {
@@ -376,11 +379,12 @@ public class ManageSignalementService
                         }
 
                     }
-                    // Status = 'requalification'
+            // Status = 'requalification'
                     else
                         if ( status.equals( SignalementRestConstants.JSON_TAG_ANOMALY_REQUALIFIED ) )
                         {
                             request.getSession( ).setAttribute( PARAMETER_WEBSERVICE_ID_TYPE_ANOMALIE, idTypeAnomalie );
+                            request.getSession( ).setAttribute(PARAMETER_WEBSERVICE_EMAIL_ACTEUR, emailActeur);
 
                             Signalement signalement = _signalementService.getSignalement( id );
 
@@ -430,37 +434,9 @@ public class ManageSignalementService
                                 jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
                             }
 
-                            Integer nIdWorkflow = _signalementWorkflowService.getSignalementWorkflowId( );
-
-                            ResourceHistory resourceHistory = _signalementWorkflowService.getLastHistoryResource( signalement.getId( ).intValue( ),
-                                    Signalement.WORKFLOW_RESOURCE_TYPE, nIdWorkflow );
-                            ITask taskRequalification = null;
-
-                            List<ITask> listTask = _taskService.getListTaskByIdAction( resourceHistory.getAction( ).getId( ), Locale.FRENCH );
-
-                            for ( ITask task : listTask )
-                            {
-                                if ( "taskSignalementRequalification".equals( task.getTaskType( ).getKey( ) ) )
-                                {
-                                    taskRequalification = task;
-                                }
-                            }
-
-                            if ( taskRequalification != null )
-                            {
-                                _signalementService.saveRequalification( signalement.getId( ), signalement.getTypeSignalement( ).getId( ),
-                                        signalement.getAdresses( ).get( 0 ).getAdresse( ), signalement.getSecteur( ).getIdSector( ),
-                                        taskRequalification.getId( ), signalement.getCommentaireAgentTerrain( ) );
-                                _signalementService.setRequalificationIdHistory( signalement.getId( ), resourceHistory.getId( ), taskRequalification.getId( ) );
-                                _signalementService.updateCommentaireAgent( comment, signalement.getId( ) );
-                                if ( emailActeur != null )
-                                {
-                                    _signalementWorkflowService.setUserAccessCodeHistoryResource( emailActeur, resourceHistory.getId( ) );
-                                }
-                            }
 
                         }
-                        // Status = a rqualifier
+            // Status = a rqualifier
                         else
                             if ( status.equals( SignalementRestConstants.JSON_TAG_ANOMALY_A_REQUALIFIED ) )
                             {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2021, City of Paris
+ * Copyright (c) 2002-2022, City of Paris
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,6 @@ package fr.paris.lutece.plugins.dansmarue.modules.rest.rs;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -62,16 +61,9 @@ import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.DeserializationConfig.Feature;
 import org.codehaus.jackson.map.ObjectMapper;
 
-import com.sun.jersey.core.header.FormDataContentDisposition;
-import com.sun.jersey.multipart.BodyPartEntity;
-import com.sun.jersey.multipart.FormDataParam;
-import com.sun.jersey.multipart.MultiPart;
-
 import fr.paris.lutece.plugins.dansmarue.business.entities.Adresse;
 import fr.paris.lutece.plugins.dansmarue.business.entities.PhotoDMR;
-import fr.paris.lutece.plugins.dansmarue.business.entities.Priorite;
 import fr.paris.lutece.plugins.dansmarue.business.entities.Signalement;
-import fr.paris.lutece.plugins.dansmarue.business.entities.Signaleur;
 import fr.paris.lutece.plugins.dansmarue.business.entities.Source;
 import fr.paris.lutece.plugins.dansmarue.business.entities.TypeSignalement;
 import fr.paris.lutece.plugins.dansmarue.business.exceptions.AlreadyFollowedException;
@@ -94,6 +86,7 @@ import fr.paris.lutece.portal.service.datastore.DatastoreService;
 import fr.paris.lutece.portal.service.template.AppTemplateService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPathService;
+import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import fr.paris.lutece.util.html.HtmlTemplate;
 import fr.paris.lutece.util.signrequest.RequestAuthenticator;
 import net.sf.json.JSONArray;
@@ -402,147 +395,6 @@ public class SignalementRest
         return _signalementRestService.updatePictureIncident( request, requestBodyStream );
     }
 
-    /**
-     * Method to get picture and update signalement.
-     *
-     * @param request
-     *            the http request
-     * @param uploadedInputStream
-     *            the picture stream
-     * @param fileDetail
-     *            the format file
-     * @param incidentId
-     *            the report id
-     * @return json reponse
-     */
-    @POST
-    @Path( SignalementRestConstants.PATH_API + SignalementRestConstants.SLASH + "photo2" )
-    @Produces( MediaType.APPLICATION_JSON )
-    @Consumes( MediaType.MULTIPART_FORM_DATA )
-    public String updatePictureSignalementCordova( @Context HttpServletRequest request, @FormDataParam( "imgField" ) InputStream uploadedInputStream,
-            @FormDataParam( "imgField" ) FormDataContentDisposition fileDetail, @FormDataParam( "incident_id" ) String incidentId )
-    {
-        return _signalementRestService.updatePictureIncidentCordova( request, uploadedInputStream, fileDetail, incidentId );
-    }
-
-    /**
-     * Black berry get nomenclature.
-     *
-     * @param request
-     *            the http request
-     * @return list category
-     * @deprecated Gets the nomenclature for blackberry
-     */
-    @Deprecated
-    @GET
-    @Path( SignalementRestConstants.PATH_API + SignalementRestConstants.SLASH + SignalementRestConstants.PATH_BLACK_BERRY_CAT )
-    @Produces( MediaType.TEXT_XML )
-    public String blackBerryGetNomenclature( @Context HttpServletRequest request )
-    {
-        return _signalementRestService.getCategoriesListXml( );
-    }
-
-    /**
-     * /**.
-     *
-     * @param strPriorite
-     *            strPriorite
-     * @param strCategorie
-     *            strCategorie
-     * @param photoId
-     *            photoId
-     * @param strIdNomenclature
-     *            strIdNomenclature
-     * @param strDirection
-     *            strDirection
-     * @param strLatitude
-     *            strLatitude
-     * @param strLongitude
-     *            strLongitude
-     * @param strAdresse
-     *            strAdresse
-     * @param strKey
-     *            strKey
-     * @param strEmail
-     *            strEmail
-     * @param strCommentaire
-     *            strCommentaire
-     * @param request
-     *            request
-     * @return answer
-     * @deprecated Method for BlackBerry
-     */
-    @Deprecated
-    @POST
-    @Path( SignalementRestConstants.PATH_API + SignalementRestConstants.SLASH + SignalementRestConstants.PATH_BLACK_BERRY )
-    @Consumes( MediaType.APPLICATION_FORM_URLENCODED )
-    @Produces( MediaType.TEXT_XML )
-    public String blackBerryPostSignalement( @FormParam( "1" ) String strPriorite, @FormParam( "2" ) String strCategorie, @FormParam( "recordId" ) Long photoId,
-            @FormParam( "10" ) String strIdNomenclature, @FormParam( "12" ) String strDirection, @FormParam( "11_x" ) String strLatitude,
-            @FormParam( "11_y" ) String strLongitude, @FormParam( "11_address" ) String strAdresse, @FormParam( "key" ) String strKey,
-            @FormParam( "6" ) String strEmail, @FormParam( "8" ) String strCommentaire, @Context HttpServletRequest request )
-    {
-        Signalement signalement = new Signalement( );
-
-        Priorite priorite = new Priorite( );
-        priorite.setId( Long.valueOf( strPriorite ) );
-        signalement.setPriorite( priorite );
-
-        TypeSignalement typeSignalement = new TypeSignalement( );
-        typeSignalement.setId( 4 );
-        signalement.setTypeSignalement( typeSignalement );
-
-        List<Adresse> pAdresses = new ArrayList<>( );
-        Adresse adresse = new Adresse( );
-        adresse.setLat( Double.parseDouble( strLatitude ) );
-        adresse.setLng( Double.parseDouble( strLongitude ) );
-        adresse.setAdresse( strAdresse );
-        pAdresses.add( adresse );
-        signalement.setAdresses( pAdresses );
-
-        Signaleur signaleur = new Signaleur( );
-        signaleur.setMail( strEmail );
-
-        List<Signaleur> pSignaleurs = new ArrayList<>( );
-        pSignaleurs.add( signaleur );
-        signalement.setSignaleurs( pSignaleurs );
-
-        signalement.setCommentaire( strCommentaire );
-
-        List<PhotoDMR> pPhotos = new ArrayList<>( );
-        pPhotos.add( _signalementRestService.getPictureForBlackBerry( photoId ) );
-        signalement.setPhotos( pPhotos );
-
-        return _signalementRestService.doSaveIncidentForBlackBerry( signalement );
-    }
-
-    /**
-     * Black berry post picture.
-     *
-     * @param multiPart
-     *            the multipart request (containing picture)
-     * @return XML format answer
-     * @deprecated Method to post picture from BlackBerry
-     */
-    @Deprecated
-    @POST
-    @Path( SignalementRestConstants.PATH_API + SignalementRestConstants.SLASH + SignalementRestConstants.PATH_BLACK_BERRY_PICTURE )
-    public String blackBerryPostPicture( MultiPart multiPart )
-    {
-
-        BodyPartEntity bpe = (BodyPartEntity) multiPart.getBodyParts( ).get( 1 ).getEntity( );
-        try
-        {
-            InputStream source = bpe.getInputStream( );
-            _signalementRestService.updatePictureIncidentBlackberry( source );
-        }
-        catch( Exception e )
-        {
-            AppLogService.error( e );
-            return "ko";
-        }
-        return "ok";
-    }
 
     /**
      * archive report rejected.
@@ -583,10 +435,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( LibrarySiraConstants.REST_TYPE_SIGNALEMENT_SERVICE )
     public String getAllSousTypeSignalementCascade( String parameters )
@@ -621,10 +473,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( LibrarySiraConstants.REST_GET_SIGNALEMENT_BY_ID )
     public String getSignalementById( String parameters )
@@ -664,10 +516,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getAddressItem" )
     public String getAddressItem( String parameters )
@@ -693,10 +545,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getGeomFromLambertToWgs84" )
     public String getGeomFromLambertToWgs84( String parameters )
@@ -727,10 +579,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getGeomFromLambert93ToWgs84" )
     public String getGeomFromLambert93ToWgs84( String parameters )
@@ -760,10 +612,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "findAllSignalementInPerimeterWithDTO" )
     public String findAllSignalementInPerimeterWithDTO( String parameters )
@@ -795,10 +647,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getDistanceBetweenSignalement" )
     public String getDistanceBetweenSignalement( String parameters )
@@ -831,10 +683,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "isSignalementFollowable" )
     public String isSignalementFollowableAndisSignalementFollowedByUser( String parameters )
@@ -863,10 +715,10 @@ public class SignalementRest
      */
     @GET
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getAllPriorite" )
     @Encoded
@@ -895,10 +747,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "loadPrioriteById" )
     public String loadPrioriteById( String parameters )
@@ -929,10 +781,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getArrondissementByGeom" )
     public String getArrondissementByGeom( String parameters )
@@ -964,7 +816,7 @@ public class SignalementRest
      */
     @GET
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getTypeSignalementTree" )
     public String getTypeSignalementTree( @Context HttpServletRequest request )
@@ -984,13 +836,53 @@ public class SignalementRest
      */
     @GET
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getTypeSignalementTreeForSource/{idSource}" )
     public String getTypeSignalementTreeForSource( @PathParam( SignalementRestConstants.PARAMETERS_ID_SOURCE ) Integer idSource,
             @Context HttpServletRequest request )
     {
         return _signalementRestService.getCategoriesListJsonForSource( idSource );
+    }
+
+    /**
+     * Gets the actualite.
+     *
+     * @param versionActualite
+     *            the actualite version
+     * @param request
+     *            the request
+     * @return the actualite
+     */
+    @GET
+    @Produces( {
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
+    } )
+    @Path( "getActualite/{versionActualite}" )
+    public String getActualite( @PathParam( SignalementRestConstants.PARAMETERS_VERSION_ACTUALITE ) int versionActualite,
+            @Context HttpServletRequest request )
+    {
+        return _signalementRestService.getActualiteListJson( versionActualite );
+    }
+
+    /**
+     * Gets the aide.
+     *
+     * @param versionAide
+     *            the aide version
+     * @param request
+     *            the request
+     * @return the aide
+     */
+    @GET
+    @Produces( {
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
+    } )
+    @Path( "getAide/{versionAide}" )
+    public String getAide( @PathParam( SignalementRestConstants.PARAMETERS_VERSION_AIDE ) int versionAide,
+            @Context HttpServletRequest request )
+    {
+        return _signalementRestService.getAideListJson( versionAide );
     }
 
     /**
@@ -1004,7 +896,7 @@ public class SignalementRest
      */
     @GET
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getInfosForSource/{idSource}" )
     public String getInfosForSource( @PathParam( SignalementRestConstants.PARAMETERS_ID_SOURCE ) Integer idSource, @Context HttpServletRequest request )
@@ -1034,10 +926,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getTypeSignalement" )
     public String getTypeSignalement( String parameters )
@@ -1067,7 +959,7 @@ public class SignalementRest
      */
     @GET
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "isDmrOnline" )
     public String isDmrOnline( )
@@ -1093,10 +985,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "findByIdTypeSignalement" )
     public String findByIdTypeSignalement( String parameters )
@@ -1128,10 +1020,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "addFollower" )
     public String addFollower( String parameters )
@@ -1170,10 +1062,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getDossiersCourrantsByGeomWithLimit" )
     public String getDossiersCourrantsByGeomWithLimit( String parameters )
@@ -1264,10 +1156,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( LibrarySiraConstants.REST_GET_LIST_WORKFLOW_ACTION )
     public String getWorkflowActions( String parameters )
@@ -1302,10 +1194,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "sauvegarderSignalement" )
     public String sauvegarderSignalement( String parameters )
@@ -1344,10 +1236,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "validateServiceFaitSignalement" )
     public String validateServiceFaitSignalement( String parameters, @Context HttpServletRequest request )
@@ -1383,10 +1275,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getSignalementByToken" )
     public String getSignalementByToken( String parameters )
@@ -1444,6 +1336,30 @@ public class SignalementRest
         json.accumulate( "numero", signalement.getNumero( ) );
         json.accumulate( "typeSignalement", formatJsonTypeSignalement( signalement.getTypeSignalement( ) ) );
 
+        if ( signalement.getPhotos( ) != null )
+        {
+            for ( PhotoDMR photo : signalement.getPhotos( ) )
+            {
+                String token = "";
+                if(StringUtils.isNotBlank( photo.getCheminPhoto( ) )) {
+                    token = "_"+photo.getCheminPhoto( ).split("_")[0];
+                }
+
+                if ( photo.getVue( ).equals( SignalementRestConstants.VUE_PRES ) )
+                {
+                    json.accumulate( "pictureClose", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
+                }
+                else if ( photo.getVue( ).equals( SignalementRestConstants.VUE_ENSEMBLE ) )
+                {
+                    json.accumulate( "pictureFar", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
+                }
+                else if ( photo.getVue( ).equals( SignalementRestConstants.VUE_SERVICE_FAIT ) )
+                {
+                    json.accumulate( "pictureServiceFait", AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_URL_PICTURE ) + photo.getId( )+token );
+                }
+            }
+        }
+
         return json.toString( );
     }
 
@@ -1458,10 +1374,10 @@ public class SignalementRest
      */
     @POST
     @Consumes( {
-            MediaType.APPLICATION_JSON
+        MediaType.APPLICATION_JSON
     } )
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getHistorySignalement" )
     public String getHistorySignalement( String parameters, @Context HttpServletRequest request )
@@ -1474,7 +1390,7 @@ public class SignalementRest
             object = mapper.readValue( parameters, JSONObject.class );
             String id = object.containsKey( SignalementRestConstants.JSON_TAG_SIGNALEMENT_ID )
                     ? object.getString( SignalementRestConstants.JSON_TAG_SIGNALEMENT_ID )
-                    : null;
+                            : null;
 
             Integer idSignalement = mapper.readValue( id, Integer.class );
 
@@ -1497,7 +1413,7 @@ public class SignalementRest
      */
     @GET
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getTypeMessageServiceFait" )
     public String getTypeMessageServiceFait( )
@@ -1527,7 +1443,7 @@ public class SignalementRest
      */
     @GET
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getRaisonRejet" )
     public String getRaisonRejet( )
@@ -1549,24 +1465,44 @@ public class SignalementRest
 
     /*
      * Gets the anomalie by number.
-     * 
+     *
      * Ancienne méthode de récupération sans le guid. Permet aux users n'ayant pas fait la MAJ de l'appli de pouvoir utiliser la recherche sans guid (mais avec
      * le bug de suivi: DMR-2092)
      *
      * @param number the number
-     * 
+     *
      * @param request the request
-     * 
+     *
      * @return the anomalie by number
      */
     @GET
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getAnomalieByNumber/{number}" )
     public String getAnomalieByNumber( @PathParam( SignalementRestConstants.PARAMETER_NUMBER ) String number, @Context HttpServletRequest request )
     {
         return _signalementRestService.getAnomalieByNumber( number, "-1" );
+    }
+
+
+    /**
+     * Gets list of anomalies belongs to the tour sheet.
+     *
+     * @param idFDT id of the tour sheet
+     *
+     * @param request the request
+     *
+     * @return json response
+     */
+    @GET
+    @Produces( {
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
+    } )
+    @Path( "searchIncidentsByIdFdt/{idFDT}" )
+    public String searchIncidentsByIdFdt( @PathParam( "idFDT" ) int idFDT, @Context HttpServletRequest request )
+    {
+        return _signalementRestService.getAnomaliesByIdFDT( idFDT);
     }
 
     /**
@@ -1582,7 +1518,7 @@ public class SignalementRest
      */
     @GET
     @Produces( {
-            MediaType.APPLICATION_JSON + ";charset=utf-8"
+        MediaType.APPLICATION_JSON + ";charset=utf-8"
     } )
     @Path( "getAnomalieByNumber/{number}/{guid}" )
     public String getAnomalieByNumber( @PathParam( SignalementRestConstants.PARAMETER_NUMBER ) String number,

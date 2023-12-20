@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2021, City of Paris
+ * Copyright (c) 2002-2022, City of Paris
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -59,10 +59,11 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
-import com.sun.jersey.core.header.FormDataContentDisposition;
-
+import fr.paris.lutece.plugins.dansmarue.business.entities.Actualite;
 import fr.paris.lutece.plugins.dansmarue.business.entities.Adresse;
+import fr.paris.lutece.plugins.dansmarue.business.entities.Aide;
 import fr.paris.lutece.plugins.dansmarue.business.entities.Arrondissement;
+import fr.paris.lutece.plugins.dansmarue.business.entities.FeuilleDeTournee;
 import fr.paris.lutece.plugins.dansmarue.business.entities.MessageTypologie;
 import fr.paris.lutece.plugins.dansmarue.business.entities.NotificationSignalementUserMultiContents;
 import fr.paris.lutece.plugins.dansmarue.business.entities.ObservationRejet;
@@ -86,14 +87,19 @@ import fr.paris.lutece.plugins.dansmarue.modules.rest.service.formatters.Categor
 import fr.paris.lutece.plugins.dansmarue.modules.rest.service.formatters.ErrorSignalementFormatterJson;
 import fr.paris.lutece.plugins.dansmarue.modules.rest.service.formatters.SignalementFormatterJson;
 import fr.paris.lutece.plugins.dansmarue.modules.rest.service.formatters.SignalementRestDTOFormatterJson;
+import fr.paris.lutece.plugins.dansmarue.modules.rest.util.StringUtilsDmr;
 import fr.paris.lutece.plugins.dansmarue.modules.rest.util.constants.SignalementRestConstants;
 import fr.paris.lutece.plugins.dansmarue.modules.rest.util.exception.ParseSignalementFromJSONException;
+import fr.paris.lutece.plugins.dansmarue.service.IActualiteService;
 import fr.paris.lutece.plugins.dansmarue.service.IAdresseService;
+import fr.paris.lutece.plugins.dansmarue.service.IAideService;
 import fr.paris.lutece.plugins.dansmarue.service.IArrondissementService;
+import fr.paris.lutece.plugins.dansmarue.service.IFeuilleDeTourneeService;
 import fr.paris.lutece.plugins.dansmarue.service.IMessageTypologieService;
 import fr.paris.lutece.plugins.dansmarue.service.IObservationRejetService;
 import fr.paris.lutece.plugins.dansmarue.service.IPhotoService;
 import fr.paris.lutece.plugins.dansmarue.service.IPrioriteService;
+import fr.paris.lutece.plugins.dansmarue.service.ISignalementExportService;
 import fr.paris.lutece.plugins.dansmarue.service.ISignalementService;
 import fr.paris.lutece.plugins.dansmarue.service.ISignaleurService;
 import fr.paris.lutece.plugins.dansmarue.service.ISiraUserService;
@@ -102,8 +108,9 @@ import fr.paris.lutece.plugins.dansmarue.service.IWorkflowService;
 import fr.paris.lutece.plugins.dansmarue.service.dto.DossierSignalementDTO;
 import fr.paris.lutece.plugins.dansmarue.service.dto.TypeSignalementDTO;
 import fr.paris.lutece.plugins.dansmarue.service.output.SignalementOutputPrcessor;
+import fr.paris.lutece.plugins.dansmarue.util.constants.DateConstants;
 import fr.paris.lutece.plugins.dansmarue.util.constants.SignalementConstants;
-import fr.paris.lutece.plugins.dansmarue.utils.DateUtils;
+import fr.paris.lutece.plugins.dansmarue.utils.IDateUtils;
 import fr.paris.lutece.plugins.dansmarue.utils.ImgUtils;
 import fr.paris.lutece.plugins.identitystore.v1.web.rs.dto.IdentityDto;
 import fr.paris.lutece.plugins.identitystore.v1.web.service.IdentityService;
@@ -115,7 +122,6 @@ import fr.paris.lutece.plugins.rest.service.formatters.IFormatter;
 import fr.paris.lutece.plugins.unittree.modules.dansmarue.business.sector.Sector;
 import fr.paris.lutece.plugins.workflowcore.business.action.Action;
 import fr.paris.lutece.plugins.workflowcore.business.action.ActionFilter;
-import fr.paris.lutece.plugins.workflowcore.business.resource.ResourceHistory;
 import fr.paris.lutece.plugins.workflowcore.business.state.State;
 import fr.paris.lutece.plugins.workflowcore.service.action.IActionService;
 import fr.paris.lutece.plugins.workflowcore.service.state.IStateService;
@@ -209,6 +215,27 @@ public class SignalementRestService implements ISignalementRestService
     @Inject
     private IMessageTypologieService _messageTypologieService;
 
+    /** The actualite service. */
+    @Inject
+    private IActualiteService _actualiteService;
+
+    /** The aide service. */
+    @Inject
+    private IAideService _aideService;
+
+    /** Feuille de tournee service. */
+    @Inject
+    private IFeuilleDeTourneeService _feuilleTourneeService;
+
+    /** Feuille signalement export service. */
+    @Inject
+    private ISignalementExportService _signalementExportService;
+
+    /** The date utils. */
+    // UTILS
+    @Inject
+    private IDateUtils _dateUtils;
+
     /** The Constant PARAMETER_WEBSERVICE_COMMENT_VALUE. */
     private static final String PARAMETER_WEBSERVICE_COMMENT_VALUE = "webservice_comment_value";
 
@@ -217,6 +244,9 @@ public class SignalementRestService implements ISignalementRestService
 
     /** The Constant PARAMETER_WEBSERVICE_CHOSEN_MESSAGE. */
     private static final String PARAMETER_WEBSERVICE_CHOSEN_MESSAGE = "chosenMessage";
+
+    /** The Constant PARAMETER_WEBSERVICE_EMAIL_ACTEUR. */
+    private static final String PARAMETER_WEBSERVICE_EMAIL_ACTEUR = "emailActeur";
 
     /** The Constant PARAMETER_WEBSERVICE_IS_MESSAGE_TYPO. */
     private static final String PARAMETER_WEBSERVICE_IS_MESSAGE_TYPO = "isMessageTypo";
@@ -338,13 +368,25 @@ public class SignalementRestService implements ISignalementRestService
                                                                                         strRespons = checkVersion( );
                                                                                     }
                                                                                     else
-                                                                                    {
-                                                                                        ErrorSignalement error = new ErrorSignalement( );
-                                                                                        error.setErrorCode( SignalementRestConstants.ERROR_BAD_JSON_REQUEST );
-                                                                                        error.setErrorMessage( StringUtils.EMPTY );
+                                                                                        if ( strRequestType
+                                                                                                .equals( SignalementRestConstants.REQUEST_TYPE_SAVE_PRECISIONS_TERRAIN ) )
+                                                                                        {
+                                                                                            strRespons = savePrecisionsTerrain( json );
+                                                                                        }
+                                                                                        else
+                                                                                            if ( strRequestType
+                                                                                                    .equals( SignalementRestConstants.REQUEST_TYPE_SAVE_INFO_APRES_TOURNEE ) )
+                                                                                            {
+                                                                                                strRespons = saveInfoApresTournee( json );
+                                                                                            }
+                                                                                            else
+                                                                                                {
+                                                                                                    ErrorSignalement error = new ErrorSignalement( );
+                                                                                                    error.setErrorCode( SignalementRestConstants.ERROR_BAD_JSON_REQUEST );
+                                                                                                    error.setErrorMessage( StringUtils.EMPTY );
 
-                                                                                        return formatterJson.format( error );
-                                                                                    }
+                                                                                                    return formatterJson.format( error );
+                                                                                                }
 
             JSONArray jsonArrayRespons = new JSONArray( );
             jsonArrayRespons.element( strRespons );
@@ -400,7 +442,7 @@ public class SignalementRestService implements ISignalementRestService
         json.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
 
         List<Signalement> listSignalement = _signalementService.findAllSignalementInPerimeterWithInfo( Double.parseDouble( strLatitude ),
-                Double.parseDouble( strLongitude ), Integer.valueOf( strRadius ) );
+                Double.parseDouble( strLongitude ), Integer.valueOf( strRadius ), StringUtils.EMPTY );
 
         AppLogService.info( "module-signalement-rest getIncidentStats" );
         int nOnGoingIncidents = 0;
@@ -480,6 +522,104 @@ public class SignalementRestService implements ISignalementRestService
             }
         }
 
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String savePrecisionsTerrain( JSONObject jsonSrc ){
+
+        Long nIdSignalement = jsonSrc.getLong( SignalementRestConstants.JSON_TAG_SIGNALEMENT_ID );
+        String strPrecisionTerrain = jsonSrc.getString( SignalementRestConstants.JSON_TAG_INCIDENT_PRECISION_TERRAIN );
+
+        _signalementService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_SIGNALEMENT_SERVICE_BEAN );
+
+        IFormatter<ErrorSignalement> formatterJsonError = new ErrorSignalementFormatterJson( );
+
+        JSONObject jsonAnswer = new JSONObject( );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_REQUEST, SignalementRestConstants.REQUEST_TYPE_SAVE_PRECISIONS_TERRAIN );
+
+        JSONObject json = new JSONObject( );
+        json.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
+
+        if ( StringUtils.isBlank( strPrecisionTerrain ) )
+        {
+            ErrorSignalement error = new ErrorSignalement( );
+            error.setErrorCode( SignalementRestConstants.ERROR_EMPTY_INCIDENT_PRECISION_TERRAIN );
+            error.setErrorMessage( StringUtils.EMPTY );
+
+            return formatterJsonError.format( error );
+        }
+
+        // Récupération du signalement
+        Signalement signalement = _signalementService.loadById( nIdSignalement );
+
+        // Aucun signalement ne correspond au numéro
+        if ( signalement == null )
+        {
+            ErrorSignalement error = new ErrorSignalement( );
+            error.setErrorCode( SignalementRestConstants.ERROR_GET_SIGNALEMENT_BY_ID );
+            error.setErrorMessage( AppPropertiesService.getProperty( SignalementRestConstants.ERROR_GET_SIG_BY_ID_NOT_FOUND ) );
+
+            return formatterJsonError.format( error );
+        }
+
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, json );
+
+        signalement.setPrecisionTerrain( strPrecisionTerrain );
+        _signalementService.update( signalement );
+
+        return jsonAnswer.toString( );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String saveInfoApresTournee( JSONObject jsonSrc ){
+
+        Integer nIdFdt = jsonSrc.getInt( SignalementRestConstants.JSON_TAG_FDT_ID );
+        String strInfoApresTournee = jsonSrc.getString( SignalementRestConstants.JSON_TAG_FDT_INFO_APRES_TOURNEE );
+
+        _feuilleTourneeService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_FDT_SERVICE_BEAN );
+
+        IFormatter<ErrorSignalement> formatterJsonError = new ErrorSignalementFormatterJson( );
+
+        JSONObject jsonAnswer = new JSONObject( );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_REQUEST, SignalementRestConstants.REQUEST_TYPE_SAVE_INFO_APRES_TOURNEE );
+
+        JSONObject json = new JSONObject( );
+        json.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
+
+        if ( StringUtils.isBlank( strInfoApresTournee ) )
+        {
+            ErrorSignalement error = new ErrorSignalement( );
+            error.setErrorCode( SignalementRestConstants.ERROR_EMPTY_INCIDENT_PRECISION_TERRAIN );
+            error.setErrorMessage( StringUtils.EMPTY );
+
+            return formatterJsonError.format( error );
+        }
+
+        // Récupération de la feuille de tournée
+        FeuilleDeTournee feuilleDeTournee = _feuilleTourneeService.load( nIdFdt );
+
+        // Aucune feuille de tournée ne correspond au numéro
+        if ( feuilleDeTournee == null )
+        {
+            ErrorSignalement error = new ErrorSignalement( );
+            error.setErrorCode( SignalementRestConstants.ERROR_GET_FDT_BY_ID );
+            error.setErrorMessage( AppPropertiesService.getProperty( SignalementRestConstants.ERROR_GET_FDT_BY_ID_NOT_FOUND ) );
+
+            return formatterJsonError.format( error );
+        }
+
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, json );
+
+        feuilleDeTournee.setInfoApresTournee( strInfoApresTournee );
+        _feuilleTourneeService.update( feuilleDeTournee );
+
+        return jsonAnswer.toString( );
     }
 
     /**
@@ -566,7 +706,7 @@ public class SignalementRestService implements ISignalementRestService
         if ( !StringUtils.EMPTY.equals( guid ) )
         {
             json.accumulate( SignalementRestConstants.JSON_TAG_RESOLVED_AUTHORIZATION,
-                    signaleurFound || StringUtils.endsWithAny( getIdentityStoreAttributeValue( guid, "login" ).toLowerCase( ), getEmailDomainAccept( ) ) );
+                    signaleurFound || StringUtilsDmr.endsWithAny( getIdentityStoreAttributeValue( guid, "login" ).toLowerCase( ), getEmailDomainAccept( ) ) );
         }
         else
         {
@@ -607,6 +747,11 @@ public class SignalementRestService implements ISignalementRestService
         String strRadius = AppPropertiesService.getProperty( SignalementRestConstants.PROPERTY_RADIUS );
         String guid = jsonSrc.has( SignalementRestConstants.JSON_TAG_GUID ) ? jsonSrc.getString( SignalementRestConstants.JSON_TAG_GUID ) : null;
 
+        // not empty if case Android searchByNumber
+        String specificSignalementNumberSearch = jsonSrc.has( SignalementRestConstants.JSON_TAG_SEARCH_BY_NUMBER )
+                ? jsonSrc.getString( SignalementRestConstants.JSON_TAG_SEARCH_BY_NUMBER )
+                        : StringUtils.EMPTY;
+
         if ( StringUtils.isBlank( strLatitude ) || StringUtils.isBlank( strLongitude ) || StringUtils.isBlank( strRadius ) )
         {
             ErrorSignalement error = new ErrorSignalement( );
@@ -617,7 +762,7 @@ public class SignalementRestService implements ISignalementRestService
         }
 
         List<Signalement> listSignalement = _signalementService.findAllSignalementInPerimeterWithInfo( Double.parseDouble( strLatitude ),
-                Double.parseDouble( strLongitude ), Integer.valueOf( strRadius ) );
+                Double.parseDouble( strLongitude ), Integer.valueOf( strRadius ), specificSignalementNumberSearch );
 
         List<Signalement> listSignalementSorted = getSignalementListSorted( Double.parseDouble( strLatitude ), Double.parseDouble( strLongitude ),
                 listSignalement );
@@ -787,14 +932,14 @@ public class SignalementRestService implements ISignalementRestService
         signalement.setSecteur( secteur );
 
         // date of creation
-        SimpleDateFormat sdfDate = new SimpleDateFormat( DateUtils.DATE_FR );
+        SimpleDateFormat sdfDate = new SimpleDateFormat( DateConstants.DATE_FR );
         String strCurrentDate = sdfDate.format( Calendar.getInstance( ).getTime( ) );
         signalement.setDateCreation( strCurrentDate );
 
         // récupération de l'année et la lettre correspondant au mois
-        Date dateDay = DateUtils.getDate( signalement.getDateCreation( ), false );
-        int moisSignalement = DateUtils.getMoisInt( dateDay );
-        String strAnnee = DateUtils.getAnnee( Calendar.getInstance( ).getTime( ) );
+        Date dateDay = _dateUtils.getDate( signalement.getDateCreation( ), false );
+        int moisSignalement = _dateUtils.getMoisInt( dateDay );
+        String strAnnee = _dateUtils.getAnnee( Calendar.getInstance( ).getTime( ) );
         signalement.setAnnee( Integer.parseInt( strAnnee ) );
         signalement.setMois( _signalementService.getLetterByMonth( moisSignalement ) );
 
@@ -1179,6 +1324,11 @@ public class SignalementRestService implements ISignalementRestService
 
                     signalement = _signalementService.getSignalement( id );
 
+                    Integer workflowId = _signalementWorkflowService.getSignalementWorkflowId( );
+                    WorkflowService workflowService = WorkflowService.getInstance( );
+                    int stateid = workflowService.getState( id, Signalement.WORKFLOW_RESOURCE_TYPE, workflowId, null ).getId( );
+
+
                     if ( signalement == null )
                     {
                         jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ERROR_ERROR,
@@ -1198,7 +1348,7 @@ public class SignalementRestService implements ISignalementRestService
                                 : answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_CHOSEN_MESSAGE );
                         String emailActeur = answer.containsKey( SignalementRestConstants.JSON_TAG_EMAIL )
                                 ? answer.getString( SignalementRestConstants.JSON_TAG_EMAIL )
-                                : null;
+                                        : null;
 
                         String signalementreference = _signalementService.getSignalementReference( StringUtils.EMPTY, signalement );
 
@@ -1211,34 +1361,46 @@ public class SignalementRestService implements ISignalementRestService
                             jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
                         }
 
+
+
+                        else if ( stateid == AppPropertiesService.getPropertyInt( ID_STATE_ETAT_INITIAL, -1 ) )
+                        {
+                            jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ERROR_ERROR,
+                                    I18nService.getLocalizedString( SignalementRestConstants.ERROR_MESSAGE_INITIAL_WRONG_STATUS, request.getLocale( ) ) );
+                            jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
+                        }
+
+
                         else
                             if ( token.equals( signalement.getToken( ) ) )
                             {
                                 // OK le token correspond
 
-                                if ( controleCoherenceStatus( jsonObject, answer, jsonAnswer, request ) )
+                                if ( controleCoherenceStatus( jsonObject, answer, jsonAnswer, request, signalement ) )
                                 {
                                     motifRejetAutre = !StringUtils.isEmpty( answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET ) )
                                             ? answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET )
-                                            : StringUtils.EMPTY;
+                                                    : StringUtils.EMPTY;
                                     strDateProgrammee = StringUtils
                                             .isNotEmpty( answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION ) )
-                                                    ? answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION )
+                                            ? answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION )
                                                     : StringUtils.EMPTY;
                                     long idTypeAnomalie = PARAMETER_NULL.equals( answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE ) )
                                             ? -1
-                                            : answer.getLong( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE );
+                                                    : answer.getLong( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE );
 
                                     request.getSession( ).setAttribute( PARAMETER_WEBSERVICE_CHOSEN_MESSAGE, chosenMessage );
 
-                                    _manageSignalementService.manageStatusWithWorkflow( request, jsonObject, jsonAnswer, id, signalementreference, status, null,
-                                            motifRejetAutre, strDateProgrammee, idTypeAnomalie, comment, emailActeur );
+                                    if(StringUtils.isNotBlank( emailActeur )) {
+                                        request.getSession( ).setAttribute( PARAMETER_WEBSERVICE_EMAIL_ACTEUR, emailActeur );
+                                    }
 
                                     String photoSF = null;
                                     if ( answer.containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_PHOTO ) )
                                     {
                                         photoSF = answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_PHOTO ).equals( PARAMETER_NULL ) ? null
                                                 : answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_PHOTO );
+                                        AppLogService.info( photoSF );
                                     }
 
                                     if ( ( photoSF != null ) && SignalementRestConstants.JSON_TAG_ANOMALY_DONE.equals( status ) )
@@ -1264,12 +1426,15 @@ public class SignalementRestService implements ISignalementRestService
                                         photo.setImageThumbnailWithBytes( resizeImage );
                                         photo.setSignalement( signalement );
                                         photo.setVue( SignalementRestConstants.VUE_SERVICE_FAIT );
-                                        photo.setDate( new SimpleDateFormat( DateUtils.DATE_FR ).format( Calendar.getInstance( ).getTime( ) ) );
+                                        photo.setDate( new SimpleDateFormat( DateConstants.DATE_FR ).format( Calendar.getInstance( ).getTime( ) ) );
 
                                         // creation of the image in the db linked to the signalement
                                         _photoService.insert( photo );
 
                                     }
+
+                                    _manageSignalementService.manageStatusWithWorkflow( request, jsonObject, jsonAnswer, id, signalementreference, status, null,
+                                            motifRejetAutre, strDateProgrammee, idTypeAnomalie, comment, emailActeur );
 
                                 }
 
@@ -1310,7 +1475,7 @@ public class SignalementRestService implements ISignalementRestService
                 && jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER ).containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_COMMENT )
                 && jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER ).containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_ID_REJET )
                 && jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER )
-                        .containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION )
+                .containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_DATE_PROGRAMMATION )
                 && jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER ).containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE );
     }
 
@@ -1326,8 +1491,8 @@ public class SignalementRestService implements ISignalementRestService
         String status = jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER ).getString( SignalementRestConstants.JSON_TAG_STATUS );
         String idTypeAnomalie = jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER )
                 .containsKey( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE )
-                        ? jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER )
-                                .getString( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE )
+                ? jsonSrc.getJSONObject( SignalementRestConstants.JSON_TAG_ANSWER )
+                        .getString( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE )
                         : null;
 
         if ( SignalementRestConstants.JSON_TAG_ANOMALY_REQUALIFIED.equals( status ) && StringUtils.isNumeric( idTypeAnomalie ) )
@@ -1354,9 +1519,11 @@ public class SignalementRestService implements ISignalementRestService
      *            the json answer
      * @param request
      *            the http request
+     * @param signalement
+     *            the signalement
      * @return true if the status is correct
      */
-    private boolean controleCoherenceStatus( JSONObject jsonObject, JSONObject answer, JSONObject jsonAnswer, HttpServletRequest request )
+    private boolean controleCoherenceStatus( JSONObject jsonObject, JSONObject answer, JSONObject jsonAnswer, HttpServletRequest request, Signalement signalement )
     {
         boolean result = true;
 
@@ -1381,7 +1548,8 @@ public class SignalementRestService implements ISignalementRestService
             {
                 // pour le status requalifier le type d'anomalie est obligatoire
                 String idTypeAnomalie = answer.getString( SignalementRestConstants.JSON_TAG_INCIDENT_TYPE_ANOMALIE );
-                if ( PARAMETER_NULL.equals( idTypeAnomalie ) || StringUtils.isBlank( idTypeAnomalie ) || !StringUtils.isNumeric( idTypeAnomalie ) )
+                if ( PARAMETER_NULL.equals( idTypeAnomalie ) || StringUtils.isBlank( idTypeAnomalie ) || !StringUtils.isNumeric( idTypeAnomalie )
+                        || ( ( signalement.getTypeSignalement( ) != null ) && ( Integer.parseInt( idTypeAnomalie ) == signalement.getTypeSignalement( ).getId( ) ) ) )
                 {
 
                     jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ERROR_ERROR,
@@ -1556,6 +1724,55 @@ public class SignalementRestService implements ISignalementRestService
     }
 
     /**
+     * Gets the actualites list json for source.
+     *
+     * @param mobileVersionActualite
+     *             new list version in mobile application
+     * @return the actualites list json for source
+     */
+    public String getActualiteListJson( int mobileVersionActualite )
+    {
+        _actualiteService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_ACTUALITE_BEAN );
+
+        int currentNewsVersion = _actualiteService.getVersionActualite( );
+
+        List<Actualite> lstActualite = _actualiteService.getActualiteWithVersion( mobileVersionActualite, currentNewsVersion );
+
+        JSONObject jsonObject = new JSONObject( );
+        jsonObject.accumulate( SignalementRestConstants.JSON_TAG_REQUEST, SignalementRestConstants.REQUEST_TYPE_NEWS_LIST );
+
+        JSONObject jsonAnswer = new JSONObject( );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_CATEGORIES_VERSION, currentNewsVersion );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ACTUALITE, lstActualiteToString( lstActualite ) );
+
+        jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
+
+        return jsonObject.toString( );
+    }
+
+    public String getAideListJson( int versionAide )
+    {
+        _aideService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_AIDE_BEAN );
+
+        int currentAideVersion = _aideService.getVersionAide( );
+
+        List<Aide> lstAide = _aideService.getAideWithVersion( versionAide );
+
+        JSONObject jsonObject = new JSONObject( );
+        jsonObject.accumulate( SignalementRestConstants.JSON_TAG_REQUEST, SignalementRestConstants.REQUEST_AIDES_LIST );
+
+        JSONObject jsonAnswer = new JSONObject( );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_CATEGORIES_VERSION, currentAideVersion );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_AIDES, lstAideToString( lstAide ) );
+
+        jsonObject.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, jsonAnswer );
+
+        return jsonObject.toString( );
+    }
+
+    /**
      * Gets the anomalie by number.
      *
      * @param number
@@ -1589,7 +1806,7 @@ public class SignalementRestService implements ISignalementRestService
         // Controle sur la date de création
         Integer nbJourMax = Integer.parseInt( DatastoreService.getDataValue( "sitelabels.site_property.mobile.nb.jour.recherche.ano.max", "90" ) );
 
-        if ( DateUtils.isDateMoreThanXDay( signalement.getDateCreation( ), nbJourMax ) )
+        if ( _dateUtils.isDateMoreThanXDay( signalement.getDateCreation( ), nbJourMax ) )
         {
             ErrorSignalement error = new ErrorSignalement( );
             error.setErrorCode( SignalementRestConstants.ERROR_GET_SIGNALEMENT_BY_NUMBER_TOO_OLD );
@@ -1613,6 +1830,48 @@ public class SignalementRestService implements ISignalementRestService
 
         json.accumulate( SignalementRestConstants.JSON_TAG_INCIDENT, jsonArray.toString( ) );
 
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, json );
+
+        return jsonAnswer.toString( );
+    }
+
+    /**
+     * Gets list of anomalies belongs to the tour sheet.
+     * @param idFDT
+     *    id of the tour sheet
+     * @return json response
+     */
+    public String getAnomaliesByIdFDT(int idFDT) {
+
+        _feuilleTourneeService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_FDT_SERVICE_BEAN );
+        _signalementService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_SIGNALEMENT_SERVICE_BEAN );
+
+        FeuilleDeTournee feuilleDeTournee = _feuilleTourneeService.load( idFDT );
+
+        JSONObject jsonAnswer = new JSONObject( );
+        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_REQUEST, SignalementRestConstants.REQUEST_SEARCH_INCIDENTS_BY_ID_FDT );
+
+
+        JSONObject json = new JSONObject( );
+        json.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
+
+        JSONArray jsonArray = new JSONArray( );
+
+
+        if ( feuilleDeTournee.getListSignalementIds( ) != null )
+        {
+            List<Signalement> listSignalementFDT = _signalementService.getAnomalieWithExtraInfoForMobilSearch(feuilleDeTournee.getListSignalementIds( ));
+            SignalementFormatterJson formatterJson = new SignalementFormatterJson( );
+            jsonArray = (JSONArray) JSONSerializer.toJSON( formatterJson.format( listSignalementFDT ) );
+        } else {
+            jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ERROR_MESSAGE, AppPropertiesService.getProperty( SignalementRestConstants.ERROR_GET_ANOMALIES_FDT_BY_ID_NOT_FOUND   ) );
+        }
+
+
+        json.accumulate( SignalementRestConstants.JSON_TAG_ID_FDT_SERCH, idFDT );
+        json.accumulate( SignalementRestConstants.JSON_TAG_INFO_AVANT_TOURNEE, feuilleDeTournee.getInfoAvantTournee() );
+        json.accumulate( SignalementRestConstants.JSON_TAG_INFO_APRES_TOURNEE, feuilleDeTournee.getInfoApresTournee() );
+        json.accumulate( SignalementRestConstants.JSON_TAG_INCIDENTS, jsonArray.toString( ) );
         jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, json );
 
         return jsonAnswer.toString( );
@@ -1657,6 +1916,66 @@ public class SignalementRestService implements ISignalementRestService
 
         return result;
     }
+
+    private String lstActualiteToString( List<Actualite> lstActualite )
+    {
+        JSONArray actArr = new JSONArray();
+
+        String result = "";
+
+        if (!lstActualite.isEmpty( ))
+        {
+            for (Actualite actualite : lstActualite)
+            {
+                JSONObject json = new JSONObject();
+
+                json.put("id", actualite.getId());
+                json.put("libelle", actualite.getLibelle( ));
+                json.put("texte", actualite.getTexte( ));
+                json.put("image_url", actualite.getImageUrl( ));
+                json.put("actif", actualite.getActif( ));
+                json.put("ordre", actualite.getOrdre( ));
+
+                actArr.add(json);
+
+            }
+        }
+
+        result = actArr.toString( );
+
+        return result;
+    }
+
+    private String lstAideToString( List<Aide> lstAide )
+    {
+        JSONArray aideArr = new JSONArray();
+
+        String result = "";
+
+        if (!lstAide.isEmpty( ))
+        {
+            for (Aide aide : lstAide)
+            {
+                JSONObject json = new JSONObject();
+
+                json.accumulate("id", aide.getId());
+                json.accumulate("libelle", aide.getLibelle( ));
+                json.accumulate("hypertexte_url", aide.getHypertexteUrl( ));
+                json.accumulate("image_url", aide.getImageUrl( ));
+                json.accumulate("actif", aide.getActif( ));
+                json.accumulate("ordre", aide.getOrdre( ));
+
+                aideArr.add(json);
+
+            }
+        }
+
+        result = aideArr.toString( );
+
+        return result;
+    }
+
+
 
     /**
      * Xml representation of type report.
@@ -1714,7 +2033,8 @@ public class SignalementRestService implements ISignalementRestService
         sb.append( "{\"id\": " + ts.getId( ) + "," );
         sb.append( "\"libelle\": \"" + ts.getLibelle( ).replace( "\"", "" ) + "\"," );
         sb.append( "\"imageUrl\": \"" + getImageBase64( ts.getImage( ) ) + "\"," );
-        sb.append( "\"isAgent\": \"" + ts.getIsAgent( ) + "\"" );
+        sb.append( "\"isAgent\": \"" + ts.getIsAgent( ) + "\"," );
+        sb.append( "\"entite\": \"" + ( ts.getUnit( ) != null ? ts.getUnit( ).getLabel( ) : "" ) + "\"" );
         if ( ts.getTypeSignalementParent( ) != null )
         {
             sb.append( ", \"typeSignalementParent\":{\"id\":" + ts.getTypeSignalementParent( ).getId( ) + "}" );
@@ -1801,7 +2121,7 @@ public class SignalementRestService implements ISignalementRestService
             }
 
             // date of creation
-            SimpleDateFormat sdfDate = new SimpleDateFormat( DateUtils.DATE_FR );
+            SimpleDateFormat sdfDate = new SimpleDateFormat( DateConstants.DATE_FR );
             photoSignalement.setDate( sdfDate.format( Calendar.getInstance( ).getTime( ) ) );
 
             Optional<PhotoDMR> existPhoto = _photoService.findBySignalementId( signalement.getId( ) ).stream( )
@@ -1840,250 +2160,7 @@ public class SignalementRestService implements ISignalementRestService
         return jsonAnswer.toString( );
     }
 
-    /**
-     * Upload picture report.
-     *
-     * @param request
-     *            the http request
-     * @param uploadedInputStream
-     *            the input stream
-     * @param fileDetail
-     *            file detail
-     * @param strIdIncident
-     *            the report
-     * @return answer
-     */
-    public String updatePictureIncidentCordova( HttpServletRequest request, InputStream uploadedInputStream, FormDataContentDisposition fileDetail,
-            String strIdIncident )
-    {
-        _signalementService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_SIGNALEMENT_SERVICE_BEAN );
-        _photoService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_PHOTO_SERVICE_BEAN );
 
-        IFormatter<ErrorSignalement> formatterJson = new ErrorSignalementFormatterJson( );
-
-        String strPhotoVue = SignalementRestConstants.PICTURE_FAR;
-        if ( strIdIncident == null )
-        {
-            strIdIncident = request.getHeader( SignalementRestConstants.PARAMETERS_HEADER_INCIDENT_ID );
-            strPhotoVue = request.getHeader( SignalementRestConstants.PARAMETERS_HEADER_TYPE );
-        }
-        Signalement signalement = _signalementService.getSignalement( Long.parseLong( strIdIncident.trim( ) ) );
-
-        try
-        {
-            ByteArrayOutputStream out = new ByteArrayOutputStream( );
-            IOUtils.copy( uploadedInputStream, out );
-
-            if ( out.size( ) == 0 )
-            {
-                ErrorSignalement error = new ErrorSignalement( );
-                error.setErrorCode( SignalementRestConstants.ERROR_IMPOSSIBLE_READ_PICTURE );
-                error.setErrorMessage( StringUtils.EMPTY );
-
-                return formatterJson.format( error );
-            }
-
-            ImageResource image = new ImageResource( );
-            image.setImage( out.toByteArray( ) );
-            image.setMimeType( fileDetail.getType( ) );
-
-            String width = AppPropertiesService.getProperty( SignalementConstants.IMAGE_THUMBNAIL_RESIZE_WIDTH );
-            String height = AppPropertiesService.getProperty( SignalementConstants.IMAGE_THUMBNAIL_RESIZE_HEIGHT );
-            byte [ ] resizeImage = ImageUtil.resizeImage( out.toByteArray( ), width, height, 1 );
-
-            PhotoDMR photoSignalement = new PhotoDMR( );
-            photoSignalement.setImage( image );
-            photoSignalement.setImageThumbnailWithBytes( resizeImage );
-            photoSignalement.setImageContent( ImgUtils.checkQuality( image.getImage( ) ) );
-            photoSignalement.setMimeType( request.getContentType( ) );
-            photoSignalement.setSignalement( signalement );
-
-            if ( StringUtils.isNotBlank( strPhotoVue ) )
-            {
-                if ( SignalementRestConstants.PICTURE_FAR.equals( strPhotoVue ) )
-                {
-                    photoSignalement.setVue( SignalementRestConstants.VUE_ENSEMBLE );
-                }
-                else
-                    if ( SignalementRestConstants.PICTURE_CLOSE.equals( strPhotoVue ) )
-                    {
-                        photoSignalement.setVue( SignalementRestConstants.VUE_PRES );
-                    }
-            }
-
-            // date of creation
-            SimpleDateFormat sdfDate = new SimpleDateFormat( DateUtils.DATE_FR );
-            photoSignalement.setDate( sdfDate.format( Calendar.getInstance( ).getTime( ) ) );
-
-            _photoService.insert( photoSignalement );
-            out.close( );
-        }
-
-        catch( Exception e )
-        {
-            AppLogService.error( e.getMessage( ), e );
-
-            ErrorSignalement error = new ErrorSignalement( );
-            error.setErrorCode( SignalementRestConstants.ERROR_BAD_PICTURE );
-            error.setErrorMessage( e.getMessage( ) );
-
-            return formatterJson.format( error );
-        }
-
-        JSONObject jsonAnswer = new JSONObject( );
-        JSONObject json = new JSONObject( );
-        json.accumulate( SignalementRestConstants.JSON_TAG_STATUS, 0 );
-        jsonAnswer.accumulate( SignalementRestConstants.JSON_TAG_ANSWER, json );
-
-        return jsonAnswer.toString( );
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String updatePictureIncidentBlackberry( InputStream source )
-    {
-        _signalementService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_SIGNALEMENT_SERVICE_BEAN );
-        _photoService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_PHOTO_SERVICE_BEAN );
-
-        PhotoDMR photoSignalement = new PhotoDMR( );
-        try
-        {
-            ByteArrayOutputStream out = new ByteArrayOutputStream( );
-            IOUtils.copy( source, out );
-
-            ImageResource image = new ImageResource( );
-            image.setImage( out.toByteArray( ) );
-
-            String width = AppPropertiesService.getProperty( SignalementConstants.IMAGE_THUMBNAIL_RESIZE_WIDTH );
-            String height = AppPropertiesService.getProperty( SignalementConstants.IMAGE_THUMBNAIL_RESIZE_HEIGHT );
-            byte [ ] resizeImage = ImageUtil.resizeImage( out.toByteArray( ), width, height, 1 );
-
-            photoSignalement.setImage( image );
-            photoSignalement.setImageContent( ImgUtils.checkQuality( image.getImage( ) ) );
-            photoSignalement.setImageThumbnailWithBytes( resizeImage );
-            photoSignalement.setImageContent( out.toByteArray( ) );
-
-            // date of creation
-            SimpleDateFormat sdfDate = new SimpleDateFormat( DateUtils.DATE_FR );
-            photoSignalement.setDate( sdfDate.format( Calendar.getInstance( ).getTime( ) ) );
-
-            _photoService.insert( photoSignalement );
-            out.close( );
-        }
-        catch( Exception e )
-        {
-            AppLogService.error( e.getMessage( ), e );
-        }
-
-        return "{\"Id\":" + photoSignalement.getId( ) + ",\"photo\":\"\"}";
-    }
-
-    /**
-     * Do save incident for black berry.
-     *
-     * @param signalement
-     *            the signalement
-     * @return the string
-     * @deprecated
-     */
-    @Override
-    @Deprecated
-    public String doSaveIncidentForBlackBerry( Signalement signalement )
-    {
-        _signalementService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_SIGNALEMENT_SERVICE_BEAN );
-        _adresseService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_ADRESSE_SERVICE_BEAN );
-        _photoService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_PHOTO_SERVICE_BEAN );
-        _signaleurService = SpringContextService.getBean( "signaleurService" );
-        _signalementWorkflowService = SpringContextService.getBean( SignalementRestConstants.PARAMETER_SIGNALEMENT_WORKFLOW_BEAN );
-
-        // Arrondissement
-        Adresse adresse = signalement.getAdresses( ).get( 0 );
-        Arrondissement arrondissementByGeom = _adresseService.getArrondissementByGeom( adresse.getLng( ), adresse.getLat( ) );
-        signalement.setArrondissement( arrondissementByGeom );
-
-        // Secteur
-        Sector secteur = _adresseService.getSecteurByGeomAndTypeSignalement( adresse.getLng( ), adresse.getLat( ), signalement.getTypeSignalement( ).getId( ) );
-        signalement.setSecteur( secteur );
-
-        // date of creation
-        SimpleDateFormat sdfDate = new SimpleDateFormat( DateUtils.DATE_FR );
-        String strCurrentDate = sdfDate.format( Calendar.getInstance( ).getTime( ) );
-        signalement.setDateCreation( strCurrentDate );
-
-        // récupération de l'année et la lettre correspondant au mois
-        Date dateDay = DateUtils.getDate( signalement.getDateCreation( ), false );
-        int moisSignalement = DateUtils.getMoisInt( dateDay );
-        String strAnnee = DateUtils.getAnnee( Calendar.getInstance( ).getTime( ) );
-        signalement.setAnnee( Integer.parseInt( strAnnee ) );
-        signalement.setMois( _signalementService.getLetterByMonth( moisSignalement ) );
-
-        // Préfixe signalement
-        signalement.setPrefix( SignalementRestConstants.SIGNALEMENT_PREFIX_TELESERVICE );
-
-        // ajou d'un signalement en base et récupération de son id
-        Long nId = _signalementService.insert( signalement );
-        signalement.setId( nId );
-
-        adresse.setSignalement( signalement );
-        adresse.setId( _adresseService.insert( adresse ) );
-
-        // initialisation d'une photo à vide, sa mise à jour se fera dans un nouvel appel au service rest
-        PhotoDMR photoSignalement = new PhotoDMR( );
-        photoSignalement.setImage( null );
-        photoSignalement.setSignalement( signalement );
-        _photoService.insert( photoSignalement );
-
-        // ajout d'un signaleur
-        Signaleur signaleur = signalement.getSignaleurs( ).get( 0 );
-        signaleur.setSignalement( signalement );
-        _signaleurService.insert( signaleur );
-
-        // ajout du workflow
-        // set the state of the signalement with the workflow
-        WorkflowService workflowService = WorkflowService.getInstance( );
-
-        if ( workflowService.isAvailable( ) )
-        {
-            // récupération de l'identifiant du workflow
-            Integer workflowId = _signalementWorkflowService.getSignalementWorkflowId( );
-
-            if ( workflowId != null )
-            {
-                // création de l'état initial et exécution des tâches automatiques
-                workflowService.executeActionAutomatic( signalement.getId( ).intValue( ), Signalement.WORKFLOW_RESOURCE_TYPE, workflowId, null );
-            }
-            else
-            {
-                AppLogService.error( "Signalement : No workflow selected" );
-            }
-        }
-        else
-        {
-            AppLogService.error( "Signalement : Workflow not available" );
-        }
-
-        StringBuilder sbJson = new StringBuilder( );
-        sbJson.append( "{\"Id\":" );
-        sbJson.append( signalement.getId( ) );
-        sbJson.append( ",\"Priorite\":\"\",\"Type\":\"\",\"typeId\":\"\",\"\":\"\",\"Adresse\":\"\",\"Mail\":\"\",\"Com\":\"\",\"photo\":\"\"}" );
-
-        return sbJson.toString( );
-    }
-
-    /**
-     * Hack to get the picture and re give it when the whole signalement arrive.
-     *
-     * @param id
-     *            the id picture
-     *
-     * @return picture
-     */
-    public PhotoDMR getPictureForBlackBerry( Long id )
-    {
-        return _photoService.load( id );
-    }
 
     /**
      * POJO for report.
@@ -2327,7 +2404,7 @@ public class SignalementRestService implements ISignalementRestService
         }
 
         // Si le signaleur n'est pas trouvé et que l'email ne finit pas par @paris.fr, remonte une erreur
-        if ( !signaleurFound && !StringUtils.endsWithAny( getIdentityStoreAttributeValue( guid, "email" ).toLowerCase( ), getEmailDomainAccept( ) ) )
+        if ( !signaleurFound && !StringUtilsDmr.endsWithAny( getIdentityStoreAttributeValue( guid, "email" ).toLowerCase( ), getEmailDomainAccept( ) ) )
         {
             AppLogService.error( "signaleur not found and bad domain email !! " );
             ErrorSignalement error = new ErrorSignalement( );
@@ -2374,16 +2451,21 @@ public class SignalementRestService implements ISignalementRestService
 
         JSONObject json = new JSONObject( );
 
+        AppLogService.debug( "Incident resolved id action Service Fait : "  + idActionServiceFait);
         if ( idActionServiceFait > -1 )
         {
-            request.getSession( ).setAttribute( PARAMETER_WEBSERVICE_COMMENT_VALUE, comment );
-            workflowService.doProcessAction( idIncident, Signalement.WORKFLOW_RESOURCE_TYPE, idActionServiceFait, null, request, request.getLocale( ), true );
+            if (StringUtils.isNotBlank( comment ) ) {
+                request.getSession( ).setAttribute( PARAMETER_WEBSERVICE_COMMENT_VALUE, comment );
+            }
 
+            workflowService.doProcessAction( idIncident, Signalement.WORKFLOW_RESOURCE_TYPE, idActionServiceFait, null, request, request.getLocale( ), true );
+            AppLogService.debug( "Incident resolved workflow process action termine");
             if ( StringUtils.isNotEmpty( email ) )
             {
-                ResourceHistory resourceHistory = _signalementWorkflowService.getLastHistoryResource( signalement.getId( ).intValue( ),
-                        Signalement.WORKFLOW_RESOURCE_TYPE, workflowId );
-                _signalementWorkflowService.setUserAccessCodeHistoryResource( email, resourceHistory.getId( ) );
+                AppLogService.debug( "Incident resolved mise a jour user_access_code avec le mail : " + email);
+                _signalementWorkflowService.setUserAccessCodeHistoryResource( email, signalement.getId( ).intValue( ), idActionServiceFait );
+                AppLogService.debug( "Incident resolved mise a jour user_access_code effectuée");
+
             }
         }
         else
@@ -3204,7 +3286,7 @@ public class SignalementRestService implements ISignalementRestService
             userJson.accumulate( SignalementRestConstants.JSON_TAG_NAME, name );
             userJson.accumulate( SignalementRestConstants.JSON_TAG_FIRSTNAME, firstname );
             userJson.accumulate( SignalementRestConstants.JSON_TAG_MAIL, mail );
-            userJson.accumulate( SignalementRestConstants.JSON_TAG_IS_AGENT, StringUtils.endsWithAny( mail.toLowerCase( ), getEmailDomainAccept( ) ) );
+            userJson.accumulate( SignalementRestConstants.JSON_TAG_IS_AGENT, StringUtilsDmr.endsWithAny( mail.toLowerCase( ), getEmailDomainAccept( ) ) );
 
             JSONObject jsonAnswer = new JSONObject( );
             JSONObject jsonData = new JSONObject( );
